@@ -1,0 +1,16 @@
+[package]
+name = "audeye"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+structopt = { version = "0.3", default-features = false }
+hound = { version = "3.4"}
+textplots = { version = "0.8" }
+terminal_size = { version = "0.1.17"}
+sndfile = { version = "0.0.4", features = ["ndarray_features"]}
+rayon = "1.5.1"
+tui = "0.16"
+termion = "1.5"

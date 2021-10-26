@@ -1,0 +1,6 @@
+/target
+*.wav
+*.aif*
+venv
+.vscode
+Cargo.lock
