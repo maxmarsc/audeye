@@ -21,6 +21,10 @@ use std::io::SeekFrom;
 
 mod event;
 use crate::event::{Event, Events};
+mod r#mod;
+use crate::r#mod::{
+    TabsState
+};
 
 mod render;
 use crate::render::renderer::Renderer;
@@ -35,17 +39,21 @@ use tui::{
     backend::TermionBackend,
     layout::{Constraint, Direction, Layout, Rect},
     style::Color,
+    // style::Color::{Yellow, Green},
     style::Style,
     widgets::{
         canvas::{Canvas, Map, MapResolution, Rectangle},
-        Block, Borders, Chart, Axis
+        Block, Borders, Chart, Axis, Tabs
     },
-    text::Span,
+    text::{Span, Spans},
     Terminal,
-    symbols
+    symbols,
+    
 };
 
-
+struct App<'a> {
+    tabs: TabsState<'a>,
+}
 
 #[derive(StructOpt)]
 struct CliArgs {
@@ -83,20 +91,56 @@ fn main() ->  Result<(), io::Error> {
 
     let mut waveform_render = WaveformRenderer::new(block_count, &args.path);
     let channels = waveform_render.channels;
-    let chunk_count: u32 = max(2, channels).try_into().expect("");
-    let layout_constraints = vec![Constraint::Ratio(1, chunk_count); chunk_count as usize];
+    let chunk_count: u16 = max(2, channels).try_into().expect("");
+    const tab_size: u16 = 3;
+    // let layout_constraints = vec![Constraint::Ratio(1, chunk_count); chunk_count as usize];
+    // let titles = ["Waveform", "Spectrum"].iter().cloned()
+    //     .map(Spans::from).collect();
+    let mut app = App {
+        tabs: TabsState::new(vec!["Waveform", "Spectral"])
+    };
 
 
     loop {
         terminal.draw(|f| {
+            // Chunks settings
+            let size = f.size();
+            let channel_r: u32 = ((f.size().height - tab_size) * chunk_count).into();
+            // TODO: find a way to do it without mut
+            let mut layout_constraints = vec![
+                Constraint::Ratio(size.height.into(), channel_r); (chunk_count+1) as usize
+            ];
+            layout_constraints[0] = Constraint::Length(tab_size);
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints(layout_constraints.as_ref())
-                .split(f.size());
+                .split(size);
+
+            // Tabs drawing
+            let titles: Vec<Spans> = app.tabs.titles.iter()
+                .map(|t| {
+                    let (first, rest) = t.split_at(1);
+                    Spans::from(vec![
+                        Span::styled(first, Style::default().fg(Color::Yellow)),
+                        Span::styled(rest, Style::default().fg(Color::Green))
+                    ])
+                })
+                .collect();
+            let tabs = Tabs::new(titles)
+                .block(Block::default().borders(Borders::ALL).title("Tabs"))
+                .select(app.tabs.index)
+                .highlight_style(
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .bg(Color::DarkGray)
+                );
+            f.render_widget(tabs, chunks[0]);
     
+                
+            // Channel drawing
             for ch_idx in 0..channels {
                 match waveform_render.get_representation(ch_idx) {
-                    Some(chart) => f.render_widget(chart, chunks[ch_idx]),
+                    Some(chart) => f.render_widget(chart, chunks[ch_idx + 1]),
                     None => ()
                 }
             }
@@ -107,9 +151,13 @@ fn main() ->  Result<(), io::Error> {
 
         match event {
             Event::Input(input) => {
-                if input == Key::Char('q') {
-                    break;
+                match input {
+                    Key::Char('q') => break,
+                    Key::Right => app.tabs.next(),
+                    Key::Left => app.tabs.previous(),
+                    _ => {}
                 }
+
             }
             Event::Tick => {
                 continue;

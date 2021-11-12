@@ -1,16 +1,8 @@
-use tui::backend::Backend;
-use tui::widgets::Widget;
-
 use crate::render::renderer::Renderer;
 use core::panic;
-use std::default;
 use std::io::SeekFrom;
-use std::ops::Deref;
-use std::sync::atomic::AtomicBool;
-use std::task::Context;
 extern crate sndfile;
 use crate::sndfile::{SndFileIO, SndFile};
-use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{self, Receiver, TryRecvError, Sender};
 use std::convert::{TryFrom, TryInto};
@@ -22,7 +14,6 @@ use tui::{
 };
 // use std::convert::TryInto;
 
-use super::renderer;
 
 struct WaveformData {
     p: Vec<Vec<(f64, f64)>>,
