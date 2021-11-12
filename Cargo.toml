@@ -14,3 +14,4 @@ sndfile = { version = "0.0.4", features = ["ndarray_features"]}
 rayon = "1.5.1"
 tui = "0.16"
 termion = "1.5"
+realfft = "2.0.1"
