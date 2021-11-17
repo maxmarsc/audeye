@@ -6,11 +6,14 @@ use crate::sndfile::{SndFileIO, SndFile};
 use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{self, Receiver, TryRecvError, Sender};
 use std::convert::{TryFrom, TryInto};
+use tui::backend::{Backend, TermionBackend};
+use tui::layout::Rect;
 use tui::{
     widgets::{Chart, Dataset, GraphType, Block, Borders, Axis},
     symbols,
     style::{Style, Color, Modifier},
-    text::Span
+    text::Span,
+    Frame
 };
 // use std::convert::TryInto;
 
@@ -139,8 +142,8 @@ impl Drop for WaveformRenderer {
     }
 }
 
-impl<'a> Renderer<'a, Chart<'a>> for WaveformRenderer {
-    fn get_representation(&'a mut self, channel: usize) -> Option<Chart<'a>> {
+impl Renderer for WaveformRenderer {
+    fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area : Rect) {
         // Check for end of rendering
         if !self.rendered {
             match self.rendered_rx.try_recv() {
@@ -152,11 +155,9 @@ impl<'a> Renderer<'a, Chart<'a>> for WaveformRenderer {
             }
         }
 
-        if !self.rendered || channel >= self.channels { 
-            return None
+        if self.rendered && channel < self.channels {
+            frame.render_widget(self.render(channel), area);
         }
-
-        Some(self.render(channel))
     }
 }
 

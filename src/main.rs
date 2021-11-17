@@ -13,6 +13,7 @@ use std::convert::TryInto;
 use std::thread::panicking;
 use std::cmp::max;
 extern crate sndfile;
+use crate::render::renderer;
 use crate::render::waveform;
 use crate::sndfile::SndFileIO;
 use std::io::SeekFrom;
@@ -29,6 +30,8 @@ use crate::r#mod::{
 mod render;
 use crate::render::renderer::Renderer;
 use crate::render::waveform::WaveformRenderer;
+use crate::render::spectral::SpectralRenderer;
+use crate::render::RendererType;
 // use crate::util::
 
 
@@ -89,7 +92,10 @@ fn main() ->  Result<(), io::Error> {
     let block_count: u16 = 1920 / 4 ;
 
 
-    let mut waveform_render = WaveformRenderer::new(block_count, &args.path);
+    let waveform_render = WaveformRenderer::new(block_count, &args.path);
+    // let mut spectral_render = SpectralRenderer::new(&args.path);
+    // let mut waveform_render = RendererType::Waveform(WaveformRenderer::new(block_count, &args.path));
+    let spectral_render = SpectralRenderer::new(&args.path);
     let channels = waveform_render.channels;
     let chunk_count: u16 = max(2, channels).try_into().expect("");
     const tab_size: u16 = 3;
@@ -99,6 +105,9 @@ fn main() ->  Result<(), io::Error> {
     let mut app = App {
         tabs: TabsState::new(vec!["Waveform", "Spectral"])
     };
+
+    let mut waveform = RendererType::Waveform(waveform_render);
+    let mut spectral = RendererType::Spectral(spectral_render);
 
 
     loop {
@@ -136,13 +145,16 @@ fn main() ->  Result<(), io::Error> {
                 );
             f.render_widget(tabs, chunks[0]);
     
+
+            let renderer = match app.tabs.index {
+                0 => &mut waveform,
+                1 => &mut spectral,
+                _ => unreachable!()
+            };
                 
             // Channel drawing
             for ch_idx in 0..channels {
-                match waveform_render.get_representation(ch_idx) {
-                    Some(chart) => f.render_widget(chart, chunks[ch_idx + 1]),
-                    None => ()
-                }
+                renderer.draw(f, ch_idx, chunks[ch_idx + 1]);
             }
         
         })?;
