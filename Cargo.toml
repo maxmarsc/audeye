@@ -12,8 +12,12 @@ textplots = { version = "0.8" }
 terminal_size = { version = "0.1.17"}
 sndfile = { version = "0.0.4", features = ["ndarray_features"]}
 rayon = "1.5.1"
-tui = "0.16"
+tui = { version = "0.17", default-features=true, features=["crossterm"]}
+crossterm = "0.20"
 termion = "1.5"
-realfft = "2.0.1"
+realfft = "3.0.0"
 rand = "0.8"
 argh = "0.1"
+viuer = "0.5.2"
+fast_image_resize = "0.7.0"
+image = "0.24.1"

@@ -6,7 +6,7 @@ use crate::sndfile::{SndFileIO, SndFile};
 use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{self, Receiver, TryRecvError, Sender};
 use std::convert::{TryFrom, TryInto};
-use tui::backend::{Backend, TermionBackend};
+use tui::backend::{Backend};
 use tui::layout::Rect;
 use tui::{
     widgets::{Chart, Dataset, GraphType, Block, Borders, Axis},

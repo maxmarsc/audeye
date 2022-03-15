@@ -34,12 +34,13 @@ use crate::render::spectral::SpectralRenderer;
 use crate::render::RendererType;
 // use crate::util::
 
+mod utils;
 
 // use crate::util::event::{Config, Event, Events};
 use std::{error::Error, io, time::Duration};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
-    backend::TermionBackend,
+    backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Rect},
     style::Color,
     // style::Color::{Yellow, Green},
@@ -82,7 +83,8 @@ fn main() ->  Result<(), io::Error> {
     let stdout = io::stdout().into_raw_mode()?;
     let stdout = MouseTerminal::from(stdout);
     let stdout = AlternateScreen::from(stdout);
-    let backend = TermionBackend::new(stdout);
+    let backend = CrosstermBackend::new(stdout);
+    // let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     let events = Events::new();
@@ -109,55 +111,65 @@ fn main() ->  Result<(), io::Error> {
     let mut waveform = RendererType::Waveform(waveform_render);
     let mut spectral = RendererType::Spectral(spectral_render);
 
+    let mut redraw_needed = true;
+
 
     loop {
-        terminal.draw(|f| {
-            // Chunks settings
-            let size = f.size();
-            let channel_r: u32 = ((f.size().height - tab_size) * chunk_count).into();
-            // TODO: find a way to do it without mut
-            let mut layout_constraints = vec![
-                Constraint::Ratio(size.height.into(), channel_r); (chunk_count+1) as usize
-            ];
-            layout_constraints[0] = Constraint::Length(tab_size);
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints(layout_constraints.as_ref())
-                .split(size);
 
-            // Tabs drawing
-            let titles: Vec<Spans> = app.tabs.titles.iter()
-                .map(|t| {
-                    let (first, rest) = t.split_at(1);
-                    Spans::from(vec![
-                        Span::styled(first, Style::default().fg(Color::Yellow)),
-                        Span::styled(rest, Style::default().fg(Color::Green))
-                    ])
-                })
-                .collect();
-            let tabs = Tabs::new(titles)
-                .block(Block::default().borders(Borders::ALL).title("Tabs"))
-                .select(app.tabs.index)
-                .highlight_style(
-                    Style::default()
-                        .add_modifier(Modifier::BOLD)
-                        .bg(Color::DarkGray)
-                );
-            f.render_widget(tabs, chunks[0]);
+        if true {
+            terminal.draw(|f| {
+                // Chunks settings
+                let size = f.size();
+                let channel_rd = u32::from(chunk_count * f.size().height);
+                let channel_rn = u32::from(f.size().height - tab_size);
+ 
+                // TODO: find a way to do it without mut
+                let mut layout_constraints = vec![
+                    Constraint::Ratio(channel_rn, channel_rd); (chunk_count+1) as usize
+                ];
+                layout_constraints[0] = Constraint::Length(tab_size);
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints(layout_constraints.as_ref())
+                    .split(size);
     
-
-            let renderer = match app.tabs.index {
-                0 => &mut waveform,
-                1 => &mut spectral,
-                _ => unreachable!()
-            };
-                
-            // Channel drawing
-            for ch_idx in 0..channels {
-                renderer.draw(f, ch_idx, chunks[ch_idx + 1]);
-            }
+                // Tabs drawing
+                let titles: Vec<Spans> = app.tabs.titles.iter()
+                    .map(|t| {
+                        let (first, rest) = t.split_at(1);
+                        Spans::from(vec![
+                            Span::styled(first, Style::default().fg(Color::Yellow)),
+                            Span::styled(rest, Style::default().fg(Color::Green))
+                        ])
+                    })
+                    .collect();
+                let tabs = Tabs::new(titles)
+                    .block(Block::default().borders(Borders::ALL).title("Tabs"))
+                    .select(app.tabs.index)
+                    .highlight_style(
+                        Style::default()
+                            .add_modifier(Modifier::BOLD)
+                            .bg(Color::DarkGray)
+                    );
+                f.render_widget(tabs, chunks[0]);
         
-        })?;
+    
+                let renderer = match app.tabs.index {
+                    0 => &mut waveform,
+                    1 => &mut spectral,
+                    _ => unreachable!()
+                };
+                
+    
+                // Channel drawing
+                for ch_idx in 0..channels {
+                    renderer.draw(f, ch_idx, chunks[ch_idx + 1]);
+                }
+            
+            })?;
+
+            redraw_needed = false;
+        }
 
         let event = events.next().expect("");
 
@@ -165,15 +177,21 @@ fn main() ->  Result<(), io::Error> {
             Event::Input(input) => {
                 match input {
                     Key::Char('q') => break,
-                    Key::Right => app.tabs.next(),
-                    Key::Left => app.tabs.previous(),
+                    Key::Right => {
+                        app.tabs.next();
+                        redraw_needed = true;
+                    },
+                    Key::Left => {
+                        app.tabs.previous();
+                        redraw_needed = false;
+                    },
                     _ => {}
                 }
 
             }
             Event::Tick => {
                 continue;
-            }
+            },
         }
     }
 
