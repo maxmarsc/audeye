@@ -31,6 +31,7 @@ use tui::{
 // use viuer::{print_from_file, Config};
 
 use crate::utils::filled_rectangle::FilledRectangle;
+use crate::dsp::spectrogram::compute_spectrogram;
 
 use std::num::{NonZeroU32, NonZeroUsize};
 

@@ -34,7 +34,11 @@ use crate::render::spectral::SpectralRenderer;
 use crate::render::RendererType;
 // use crate::util::
 
+// mod dsp;
+// use crate::dsp::spectrogram::compute_spectrogram;
+
 mod utils;
+mod dsp;
 
 // use crate::util::event::{Config, Event, Events};
 use std::{error::Error, io, time::Duration};
