@@ -241,7 +241,7 @@ impl<'a> Renderer for SpectralRenderer<'a> {
                     .paint(|ctx| {
                         ctx.draw(&greyscale_canva)
                     })
-                    .marker(Marker::Block)
+                    .marker(Marker::Dot)
                     .x_bounds([-1., dst_width as f64 - 1.0])
                     .y_bounds([1.0, dst_height as f64 + 1.0]);
 
