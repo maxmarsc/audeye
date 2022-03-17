@@ -107,8 +107,21 @@ impl Batcher {
             });
         }
 
-        // Build return type
-        let ret : Vec<&mut [f64]> = self.batch.iter_mut().map(|v| v.as_mut_slice()).collect();
+        // Apply window to the batch
+        for ch_vec in &mut self.batch {
+
+            // Faster ? see : https://www.nickwilcox.com/blog/autovec/
+            let window_slice = self.window.as_slice();
+            let ch_vec_slice = &mut ch_vec[0..window_slice.len()];
+
+            for i in 0..ch_vec_slice.len() {
+                ch_vec_slice[i] *= window_slice[i];
+            }
+        }
+
+        // build return type
+        let ret : Vec<&mut [f64]> = self.batch.iter_mut()
+            .map(|v| v.as_mut_slice()).collect();
 
         // Update index
         self.crt_band_idx += 1;
