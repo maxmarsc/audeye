@@ -1,14 +1,14 @@
 use tui::widgets::canvas::{Shape, Painter};
 use tui::style::Color;
-pub struct GreyScaleCanva<'a> {
+pub struct TransposedGreyScaleCanva<'a> {
     img_buffer: &'a [u8],
     width: usize,
     height: usize,
 }
 
-impl<'a> GreyScaleCanva<'a> {
-    pub fn new(img_buffer : &'a [u8], width: usize, height: usize) -> GreyScaleCanva<'a> {
-        GreyScaleCanva {
+impl<'a> TransposedGreyScaleCanva<'a> {
+    pub fn new(img_buffer : &'a [u8], width: usize, height: usize) -> TransposedGreyScaleCanva<'a> {
+        TransposedGreyScaleCanva {
             img_buffer, 
             width, 
             height
@@ -16,18 +16,16 @@ impl<'a> GreyScaleCanva<'a> {
     }
 }
 
-impl<'a> Shape for GreyScaleCanva<'a> {
+impl<'a> Shape for TransposedGreyScaleCanva<'a> {
     fn draw(&self, painter: &mut Painter) {
-        for x in 0..self.width {
-            for y in 0..self.height {
+        for y in 0..self.height {
+            for x in 0..self.width {
                 let idx = x + y * self.width;
                 let value = self.img_buffer[idx];
                 let color = Color::Rgb(value, value, value);
 
-                // let (px, py) = painter.get_point(x as f64, (self.height - y) as f64).unwrap();
-                // painter.paint(px, py, color);
-
-                painter.paint(x, y , color);
+                // painter.paint(x, y , color);
+                painter.paint(y, self.width - 1 - x, color);
             }
         }
     }

@@ -16,6 +16,7 @@ tui = { version = "0.17", default-features=true, features=["crossterm"]}
 crossterm = "0.20"
 termion = "1.5"
 realfft = "3.0.0"
+rustfft = "6.0.1"
 rand = "0.8"
 argh = "0.1"
 viuer = "0.5.2"

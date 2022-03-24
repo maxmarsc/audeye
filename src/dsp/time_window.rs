@@ -12,8 +12,8 @@ pub struct Batcher {
     frames: u64,
     tband_size: usize,
     window_size: usize,
-    crt_band_idx: u64,
-    num_bands: u64,
+    crt_band_idx: usize,
+    num_bands: usize,
     batch: Vec<Vec<f64>>,
     window: Vec<f64>,
     tmp_interleaved_block: Vec<f64>
@@ -26,9 +26,9 @@ impl Batcher {
         let tband_size = usize::try_from((window_size as f64 * (1. - overlap)) as i32).unwrap();
         sndfile.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
         let num_bands = if frames % tband_size as u64 == 0 {
-            frames / tband_size as u64
+            usize::try_from(frames / tband_size as u64).unwrap()
         } else {
-            frames / tband_size as u64 + 1
+            usize::try_from(frames / tband_size as u64 + 1).unwrap()
         };
 
         Batcher{
@@ -44,7 +44,7 @@ impl Batcher {
         }
     }
 
-    pub fn get_num_bands(&self) -> u64 {
+    pub fn get_num_bands(&self) -> usize {
         self.num_bands
     }
 
@@ -55,8 +55,8 @@ impl Batcher {
         }
 
         // Compute the first sample to seek
-        let new_seek_idx = self.crt_band_idx * self.tband_size as u64;
-        self.sndfile.seek(SeekFrom::Start(new_seek_idx)).unwrap_or_else(
+        let new_seek_idx = self.crt_band_idx as u64 * self.tband_size as u64;
+        self.sndfile.seek(SeekFrom::Start(new_seek_idx as u64)).unwrap_or_else(
                 |_| panic!("Failed to seek frame {}", new_seek_idx));
 
         // The offset left and right of the window lobe
@@ -73,7 +73,7 @@ impl Batcher {
             // End of the file, need a zero offset at the end
             usize::try_from(self.frames - new_seek_idx).unwrap()
         } else {
-            0 as usize
+            self.window_size
         };
 
         let channels = self.batch.len();

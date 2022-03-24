@@ -103,7 +103,7 @@ fn main() ->  Result<(), io::Error> {
     // let mut waveform_render = RendererType::Waveform(WaveformRenderer::new(block_count, &args.path));
     let spectral_render = SpectralRenderer::new(&args.path);
     let channels = waveform_render.channels;
-    let chunk_count: u16 = max(2, channels).try_into().expect("");
+    let chunk_count: u16 = max(1, channels).try_into().expect("");
     const tab_size: u16 = 3;
     // let layout_constraints = vec![Constraint::Ratio(1, chunk_count); chunk_count as usize];
     // let titles = ["Waveform", "Spectrum"].iter().cloned()
