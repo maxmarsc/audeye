@@ -31,7 +31,7 @@ use tui::{
 // use viuer::{print_from_file, Config};
 
 use crate::utils::filled_rectangle::FilledRectangle;
-use crate::dsp::spectrogram::SpectralData;
+use crate::dsp::spectrogram::Spectrogram;
 
 use std::num::{NonZeroU32, NonZeroUsize};
 
@@ -65,10 +65,10 @@ pub struct SpectralRenderer<'a> {
     rendered: bool,
     // block_count : 
     pub channels : usize,
-    data: SpectralData,
+    data: Option<Spectrogram>,
     kill_tx: Sender<bool>,
     rendered_rx: Receiver<bool>,
-    process_handle: Option<JoinHandle<SpectralData>>,
+    process_handle: Option<JoinHandle<Spectrogram>>,
     resizer: fr::Resizer,
     canva_img: Option<Image<'a>>
 }
@@ -89,12 +89,12 @@ impl<'a> SpectralRenderer<'a> {
         SpectralRenderer {
             rendered: false,
             channels,
-            data: SpectralData::default(),
+            data: None,
             kill_tx,
             rendered_rx,
             process_handle: Some(handle),
             resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
-            // resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Bilinear)),
+            // resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
             canva_img: None
         }
 
@@ -105,74 +105,12 @@ impl<'a> SpectralRenderer<'a> {
             let opt_handle = self.process_handle.take();
             match opt_handle {
                 Some(handle) => {
-                    self.data = handle.join().expect("Spectral rendering failed");
+                    self.data = Some(handle.join().expect("Spectral rendering failed"));
                 },
                 None => panic!("Spectral rendering handle is None")
             }
         }
     }
-
-    // fn convert_img_to_spans(&self, img: &fr::Image, width: usize, height: usize) -> Vec<Spans> {
-    //     let mut spans: Vec<Spans> = vec![];
-    //     let buffer = img.buffer();
-    //     // let height: NonZeroUsize = NonZeroUsize::try_from(img.height()).unwrap();
-
-    //     for y in 0..height {
-    //         let mut str_bytes = vec![32u8; width];
-
-    //         for x in 0..width {
-    //             let buffer_idx = x + y * width;
-
-    //             str_bytes[x] = self.ascii_converter.convert_u8_to_ascii(buffer[buffer_idx]);
-    //         }
-
-    //         // str_bytes[0] = 65 + (u8::try_from(y).expect("") % 26u8); // A-Z as first char
-    //         // str_bytes[width - 3] = 36; // $
-
-    //         let my_string = String::from_utf8(str_bytes).expect("");
-
-    //         spans.push(Spans::from(Span::raw(my_string)));
-    //     }
-
-    //     spans
-    // }
-
-
-    // fn render(&'a mut self, channel: usize, width: usize, height: usize) -> Paragraph<'a> {
-    //     if ! self.rendered {
-    //         panic!("render must not be called before data processing has been completed")
-    //     }
-
-    //     // Create source image from spectrogram
-    //     let src_image = fr::Image::from_slice_u8(
-    //         self.data.width,
-    //         self.data.height,
-    //         self.data.frames.as_mut_slice(),
-    //         fr::PixelType::U8,
-    //     )
-    //     .unwrap();
-
-    //     // Create dst image
-    //     let dst_width = width - 2;
-    //     let dst_height = height - 2;
-    //     let mut dst_img = fr::Image::new(
-    //         NonZeroU32::new(dst_width.try_into().unwrap()).unwrap(),
-    //         NonZeroU32::new(dst_height.try_into().unwrap()).unwrap(),
-    //         fr::PixelType::U8
-    //     );
-    //     let mut dst_view = dst_img.view_mut();
-
-    //     // Resize
-    //     self.resizer.resize(&src_image.view(), &mut dst_view).unwrap();
-
-
-
-    //     let spans = self.convert_img_to_spans(&dst_img, dst_width, dst_height);
-
-    //     Paragraph::new(spans)
-    //         .block(Block::default().title(format!["Channel {:?}", channel]).borders(Borders::ALL))
-    //         .alignment(Alignment::Left).wrap(Wrap { trim: true })
-    // }
 }
 
 impl<'a> Drop for SpectralRenderer<'a> {
@@ -199,14 +137,16 @@ impl<'a> Renderer for SpectralRenderer<'a> {
 
         let canva_width = area.width as usize;
         let canva_height = area.height as usize;
-
-        // frame.render_widget(self.render(channel, width, height), area);
+        let data_ref = match self.data.as_mut() {
+            Some(data_ref) => data_ref,
+            None => panic!()
+        };
 
         // Create source image from spectrogram
         let src_image = fr::Image::from_slice_u8(
-            self.data.frame_size,
-            self.data.num_frames,
-            self.data.frames[channel].as_mut_slice(),
+            NonZeroU32::new(data_ref.num_bins().try_into().unwrap()).unwrap(),
+            NonZeroU32::new(data_ref.num_bands().try_into().unwrap()).unwrap(),
+            data_ref.data(channel),
             fr::PixelType::U8,
         )
         .unwrap();
@@ -256,23 +196,14 @@ impl<'a> Renderer for SpectralRenderer<'a> {
 }
 
 fn async_compute(mut snd: SndFile, channels: usize, kill_rx: Receiver<bool>,
-        render_tx: Sender<bool>) -> JoinHandle<SpectralData> {
+        render_tx: Sender<bool>) -> JoinHandle<Spectrogram> {
     // let mut data = SpectralData::default();
     snd.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
 
 
     
     thread::spawn(move || {
-        // Read source image from test file
-        // let img = ImageReader::open("./cropped_spectrogram.pgm")
-        // .unwrap()
-        // .decode()
-        // .unwrap();
-        let data = SpectralData::new(snd, 4096, 0.75);
-
-        // data.width = NonZeroU32::new(img.width()).unwrap();
-        // data.height = NonZeroU32::new(img.height()).unwrap();
-        // data.frames = img.to_luma8().into_raw();
+        let data = Spectrogram::new(snd, 4096, 0.75);
 
         // Send rendered signal
         let _ = render_tx.send(true);
