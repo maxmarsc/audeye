@@ -16,7 +16,7 @@ use rayon::prelude::*;
 use super::time_window::Batcher;
 
 const HANN_FACTOR: f64 = 2f64; // 2²
-const DB_MIN_THRESHOLD: f64 = -150f64; // -120dB
+const DB_MIN_THRESHOLD: f64 = -130f64; // -120dB
 
 #[inline(always)]
 fn db_to_u8(db: f64) -> u8 {

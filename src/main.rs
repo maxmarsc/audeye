@@ -95,7 +95,7 @@ fn main() ->  Result<(), io::Error> {
 
 
     // Compute the size of each block to fit the screen
-    let block_count: u16 = 1920 / 4 ;
+    let block_count: usize = 1920 / 4 ;
 
 
     let waveform_render = WaveformRenderer::new(block_count, &args.path);

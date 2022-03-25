@@ -42,31 +42,10 @@ use fast_image_resize as fr;
 
 const SPECTRAL_NUANCES: usize = 32;
 
-// struct SpectralData {
-//     // Ordered by [channel]
-//     width: NonZeroU32,
-//     height: NonZeroU32,
-//     frames: Vec<Vec<u8>>
-// }
-
-
-
-// impl Default for SpectralData {
-//     fn default() -> Self {
-//         SpectralData{
-//             width: NonZeroU32::new(1).unwrap(),
-//             height: NonZeroU32::new(1).unwrap(),
-//             frames: vec![]
-//         }
-//     }
-// }
-
 pub struct SpectralRenderer<'a> {
     rendered: bool,
-    // block_count : 
     pub channels : usize,
     data: Option<Spectrogram>,
-    kill_tx: Sender<bool>,
     rendered_rx: Receiver<bool>,
     process_handle: Option<JoinHandle<Spectrogram>>,
     resizer: fr::Resizer,
@@ -82,15 +61,14 @@ impl<'a> SpectralRenderer<'a> {
         }
 
         let channels = snd.get_channels();
-        let (kill_tx, kill_rx) = mpsc::channel();
+        // let (kill_tx, _) = mpsc::channel();
         let (rendered_tx, rendered_rx) = mpsc::channel();
-        let handle = async_compute(snd, channels, kill_rx, rendered_tx);
+        let handle = async_compute(snd, rendered_tx);
         
         SpectralRenderer {
             rendered: false,
             channels,
             data: None,
-            kill_tx,
             rendered_rx,
             process_handle: Some(handle),
             resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
@@ -110,13 +88,6 @@ impl<'a> SpectralRenderer<'a> {
                 None => panic!("Spectral rendering handle is None")
             }
         }
-    }
-}
-
-impl<'a> Drop for SpectralRenderer<'a> {
-    fn drop(&mut self) {
-        // We send the kill signal to the computation thread
-        let _ = self.kill_tx.send(true);
     }
 }
 
@@ -195,13 +166,7 @@ impl<'a> Renderer for SpectralRenderer<'a> {
     }
 }
 
-fn async_compute(mut snd: SndFile, channels: usize, kill_rx: Receiver<bool>,
-        render_tx: Sender<bool>) -> JoinHandle<Spectrogram> {
-    // let mut data = SpectralData::default();
-    snd.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
-
-
-    
+fn async_compute(snd: SndFile, render_tx: Sender<bool>) -> JoinHandle<Spectrogram> {
     thread::spawn(move || {
         let data = Spectrogram::new(snd, 4096, 0.75);
 
