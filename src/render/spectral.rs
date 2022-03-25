@@ -1,6 +1,6 @@
 use crate::render::renderer::Renderer;
 use crate::render::ascii::AsciiArtConverter;
-use crate::render::greyscale::TransposedGreyScaleCanva;
+use crate::render::greyscale_canva::TransposedGreyScaleCanva;
 use core::panic;
 use std::borrow::Cow;
 use std::default;
@@ -134,35 +134,29 @@ impl<'a> Renderer for SpectralRenderer<'a> {
             fr::PixelType::U8
         ));
 
-        match &mut self.canva_img {
-            None => panic!(),
-            Some(dst_img) => {
-                let mut dst_view = dst_img.view_mut();
+        let canva_img_ref = self.canva_img.as_mut().unwrap();
+        let mut dst_view = canva_img_ref.view_mut();
 
-                // Resize
-                self.resizer.resize(&src_image.view(), &mut dst_view).unwrap();
-        
-                let greyscale_canva = TransposedGreyScaleCanva::new(
-                    dst_img.buffer(),
-                    resize_dst_width,
-                    resize_dst_height
-                );
-        
-                let canva = Canvas::default()
-                    .block(Block::default().title(format!["Channel {:?}", channel]).borders(Borders::ALL))
-                    .background_color(Color::Rgb(0, 0, 0))
-                    .paint(|ctx| {
-                        ctx.draw(&greyscale_canva)
-                    })
-                    .marker(Marker::Block)
-                    .x_bounds([-1., resize_dst_width as f64 - 1.0])
-                    .y_bounds([1.0, resize_dst_height as f64 + 1.0]);
+        // Resize
+        self.resizer.resize(&src_image.view(), &mut dst_view).unwrap();
 
-                frame.render_widget(canva, area);
+        let greyscale_canva = TransposedGreyScaleCanva::new(
+            canva_img_ref.buffer(),
+            resize_dst_width,
+            resize_dst_height
+        );
 
-            }
-        }
+        let canva = Canvas::default()
+            .block(Block::default().title(format!["Channel {:?}", channel]).borders(Borders::ALL))
+            .background_color(Color::Rgb(0, 0, 0))
+            .paint(|ctx| {
+                ctx.draw(&greyscale_canva)
+            })
+            .marker(Marker::Block)
+            .x_bounds([-1., resize_dst_width as f64 - 1.0])
+            .y_bounds([1.0, resize_dst_height as f64 + 1.0]);
 
+        frame.render_widget(canva, area);
     }
 }
 

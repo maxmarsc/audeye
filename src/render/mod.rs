@@ -2,7 +2,7 @@ pub mod renderer;
 pub mod waveform;
 pub mod spectral;
 pub mod ascii;
-pub mod greyscale;
+pub mod greyscale_canva;
 
 use tui::{Frame, backend::Backend, layout::Rect};
 use waveform::WaveformRenderer;

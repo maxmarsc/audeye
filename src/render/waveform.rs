@@ -6,6 +6,8 @@ use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{self, Receiver, Sender};
 use tui::backend::{Backend};
 use tui::layout::Rect;
+use tui::symbols::Marker;
+use tui::widgets::canvas::{Canvas, Line};
 use tui::{
     widgets::{Chart, Dataset, GraphType, Block, Borders, Axis},
     symbols,
@@ -21,6 +23,7 @@ pub struct WaveformRenderer {
     block_count : usize,
     pub channels: usize,
     data : Option<Waveform>,
+    // rendering_buffers: Vec<Vec<
     rendered_rx: Receiver<bool>,
     process_handle: Option<JoinHandle<Waveform>>,
 }
@@ -120,9 +123,36 @@ impl Renderer for WaveformRenderer {
             }
         }
 
-        if self.rendered && channel < self.channels {
-            frame.render_widget(self.render(channel), area);
-        }
+        // if self.rendered && channel < self.channels {
+        //     frame.render_widget(self.render(channel), area);
+        // }
+        if !self.rendered || channel >= self.channels { return; }
+        let data_ref = self.data.as_ref().unwrap();
+        let canva_width_int = area.width as usize - 2;
+        
+        let estimated_witdh_res = canva_width_int * 3;
+        let (mut n_int, mut p_int) = (vec![0i32; estimated_witdh_res],vec![0i32; estimated_witdh_res]);
+        data_ref.compute_min_max(channel, p_int.as_mut_slice(), n_int.as_mut_slice());
+
+        let canva = Canvas::default()
+            .block(Block::default().title(format!["Channel {:?}", channel]).borders(Borders::ALL))
+            .paint(|ctx| {
+                for (idx, (n,p)) in n_int.iter().zip(p_int.iter()).enumerate() {
+                    ctx.draw(&Line{
+                        x1: idx as f64,
+                        x2: idx as f64,
+                        y1: *n as f64,
+                        y2: *p as f64,
+                        color: Color::White
+                    })
+                }
+            })
+            .marker(Marker::Braille)
+            .x_bounds([-1., estimated_witdh_res as f64 + 1f64])
+            .y_bounds([i32::MIN as f64, i32::MAX as f64]);
+        
+            frame.render_widget(canva, area)
+
     }
 }
 
