@@ -1,14 +1,14 @@
 Milestone
  - [x] Waveform view
  - [x] Spectogram view
- - [] Channels view navigation
- - [] Channel naming (stereo, 2.1, 5.1, 7.1 ...)
- - [] Zoom in/out
- - [] Metadata view
- - [] RMS and Peak in waveform view
- - [] Option : normalize
- - [] Option :  FFT dB threshold
- - [] Option : FFT window type
- - [] Option : FFT side smoothing
- - [] Option : FFT logarithmic scale
- - [] Option : Waveform envelope ?
+ - [ ] Channels view navigation
+ - [ ] Channel naming (stereo, 2.1, 5.1, 7.1 ...)
+ - [ ] Zoom in/out
+ - [ ] Metadata view
+ - [ ] RMS and Peak in waveform view
+ - [ ] Option : normalize
+ - [ ] Option :  FFT dB threshold
+ - [ ] Option : FFT window type
+ - [ ] Option : FFT side smoothing
+ - [ ] Option : FFT logarithmic scale
+ - [ ] Option : Waveform envelope ?
