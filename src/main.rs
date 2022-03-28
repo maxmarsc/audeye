@@ -98,7 +98,7 @@ fn main() ->  Result<(), io::Error> {
     let block_count: usize = 1920 / 4 ;
 
 
-    let waveform_render = WaveformRenderer::new(block_count, &args.path);
+    let waveform_render = WaveformRenderer::new(&args.path);
     // let mut spectral_render = SpectralRenderer::new(&args.path);
     // let mut waveform_render = RendererType::Waveform(WaveformRenderer::new(block_count, &args.path));
     let spectral_render = SpectralRenderer::new(&args.path);
