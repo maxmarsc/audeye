@@ -61,6 +61,8 @@ use tui::{
 
 struct App<'a> {
     tabs: TabsState<'a>,
+    previous_frame: Rect,
+    repaint: bool
 }
 
 #[derive(StructOpt)]
@@ -109,24 +111,29 @@ fn main() ->  Result<(), io::Error> {
     // let titles = ["Waveform", "Spectrum"].iter().cloned()
     //     .map(Spans::from).collect();
     let mut app = App {
-        tabs: TabsState::new(vec!["Waveform", "Spectral"])
+        tabs: TabsState::new(vec!["Waveform", "Spectral"]),
+        previous_frame: Rect::default(),
+        repaint: true
     };
 
     let mut waveform = RendererType::Waveform(waveform_render);
     let mut spectral = RendererType::Spectral(spectral_render);
 
-    let mut redraw_needed = true;
+    // let mut redraw_needed = true;
 
 
     loop {
+        // Get current size
+        let tsize = terminal.size()?;
 
-        if true {
+        if app.repaint || (tsize != app.previous_frame) {
             terminal.draw(|f| {
                 // Chunks settings
                 let size = f.size();
+    
                 let channel_rd = u32::from(chunk_count * f.size().height);
                 let channel_rn = u32::from(f.size().height - tab_size);
- 
+    
                 // TODO: find a way to do it without mut
                 let mut layout_constraints = vec![
                     Constraint::Ratio(channel_rn, channel_rd); (chunk_count+1) as usize
@@ -171,11 +178,13 @@ fn main() ->  Result<(), io::Error> {
                 }
             
             })?;
-
-            redraw_needed = false;
         }
+        
+        // Reset state
+        app.previous_frame = tsize;
+        app.repaint = false;
 
-        let event = events.next().expect("");
+        let event = events.next().unwrap();
 
         match event {
             Event::Input(input) => {
@@ -183,11 +192,11 @@ fn main() ->  Result<(), io::Error> {
                     Key::Char('q') => break,
                     Key::Right => {
                         app.tabs.next();
-                        redraw_needed = true;
+                        app.repaint = true;
                     },
                     Key::Left => {
                         app.tabs.previous();
-                        redraw_needed = false;
+                        app.repaint = true;
                     },
                     _ => {}
                 }
