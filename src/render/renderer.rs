@@ -5,7 +5,7 @@ use tui::layout::Rect;
 
 
 pub trait Renderer {
-    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, channel: usize, area : Rect);
+    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, channel: usize, title: &str, area : Rect);
 }
 
 

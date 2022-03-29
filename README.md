@@ -1,8 +1,8 @@
 Milestone
  - [x] Waveform view
  - [x] Spectogram view
- - [ ] Channels view navigation
- - [ ] Channel naming (stereo, 2.1, 5.1, 7.1 ...)
+ - [x] Channels view navigation
+ - [x] Channel naming (stereo, 2.1, 5.1, 7.1 ...)
  - [ ] Zoom in/out
  - [ ] Metadata view
  - [ ] RMS and Peak in waveform view
@@ -12,3 +12,4 @@ Milestone
  - [ ] Option : FFT side smoothing
  - [ ] Option : FFT logarithmic scale
  - [ ] Option : Waveform envelope ?
+ - [ ] More audio format support (mp3, flac, ogg...)

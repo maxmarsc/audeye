@@ -3,6 +3,8 @@
 use structopt::StructOpt;
 use hound;
 use terminal_size::terminal_size;
+use tui::Frame;
+use tui::backend::Backend;
 use tui::layout;
 use tui::style::Modifier;
 use tui::widgets::Dataset;
@@ -16,7 +18,7 @@ extern crate sndfile;
 use crate::render::renderer;
 use crate::render::waveform;
 use crate::sndfile::SndFileIO;
-use std::io::SeekFrom;
+use std::io::{Error, ErrorKind};
 
 
 
@@ -32,6 +34,7 @@ use crate::render::renderer::Renderer;
 use crate::render::waveform::WaveformRenderer;
 use crate::render::spectral::SpectralRenderer;
 use crate::render::RendererType;
+use crate::render::headers::ChannelsTabs;
 // use crate::util::
 
 // mod dsp;
@@ -41,7 +44,7 @@ mod utils;
 mod dsp;
 
 // use crate::util::event::{Config, Event, Events};
-use std::{error::Error, io, time::Duration};
+use std::{io, time::Duration};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::CrosstermBackend,
@@ -61,6 +64,7 @@ use tui::{
 
 struct App<'a> {
     tabs: TabsState<'a>,
+    channels: ChannelsTabs,
     previous_frame: Rect,
     repaint: bool
 }
@@ -77,6 +81,29 @@ struct CliArgs {
     normalize: bool,
 }
 
+fn draw_tabs<B: Backend>(frame: &mut Frame<'_, B>, area : Rect, app: &App) {
+    // Tabs drawing
+    let tab_titles: Vec<Spans> = app.tabs.titles.iter()
+        .map(|t| {
+            let (first, rest) = t.split_at(1);
+            Spans::from(vec![
+                Span::styled(first, Style::default().fg(Color::Yellow)),
+                Span::styled(rest, Style::default().fg(Color::Green))
+            ])
+        })
+        .collect();
+    let tabs = Tabs::new(tab_titles)
+        .block(Block::default().borders(Borders::LEFT | Borders::TOP | Borders::BOTTOM)
+        .title("Tabs"))
+        .select(app.tabs.index)
+        .highlight_style(
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .bg(Color::DarkGray)
+        );
+
+    frame.render_widget(tabs, area);
+}
 
 fn main() ->  Result<(), io::Error> {
     // Get some infos about the terminal
@@ -101,25 +128,24 @@ fn main() ->  Result<(), io::Error> {
 
 
     let waveform_render = WaveformRenderer::new(&args.path);
-    // let mut spectral_render = SpectralRenderer::new(&args.path);
-    // let mut waveform_render = RendererType::Waveform(WaveformRenderer::new(block_count, &args.path));
     let spectral_render = SpectralRenderer::new(&args.path);
     let channels = waveform_render.channels;
-    let chunk_count: u16 = max(1, channels).try_into().expect("");
+    if channels > 9usize {
+        let err = Error::new(ErrorKind::InvalidInput, 
+                "Audeye does not support configuration with more than 9 channels");
+        return Err(err);
+    }
+
     const tab_size: u16 = 3;
-    // let layout_constraints = vec![Constraint::Ratio(1, chunk_count); chunk_count as usize];
-    // let titles = ["Waveform", "Spectrum"].iter().cloned()
-    //     .map(Spans::from).collect();
     let mut app = App {
         tabs: TabsState::new(vec!["Waveform", "Spectral"]),
+        channels: ChannelsTabs::new(channels),
         previous_frame: Rect::default(),
         repaint: true
     };
 
     let mut waveform = RendererType::Waveform(waveform_render);
     let mut spectral = RendererType::Spectral(spectral_render);
-
-    // let mut redraw_needed = true;
 
 
     loop {
@@ -130,7 +156,10 @@ fn main() ->  Result<(), io::Error> {
             terminal.draw(|f| {
                 // Chunks settings
                 let size = f.size();
-    
+
+                // Get activated channels and setup their layout
+                let activated_channels = app.channels.activated();
+                let chunk_count: u16 = max(1, activated_channels.len()).try_into().unwrap();
                 let channel_rd = u32::from(chunk_count * f.size().height);
                 let channel_rn = u32::from(f.size().height - tab_size);
     
@@ -143,26 +172,17 @@ fn main() ->  Result<(), io::Error> {
                     .direction(Direction::Vertical)
                     .constraints(layout_constraints.as_ref())
                     .split(size);
-    
-                // Tabs drawing
-                let titles: Vec<Spans> = app.tabs.titles.iter()
-                    .map(|t| {
-                        let (first, rest) = t.split_at(1);
-                        Spans::from(vec![
-                            Span::styled(first, Style::default().fg(Color::Yellow)),
-                            Span::styled(rest, Style::default().fg(Color::Green))
-                        ])
-                    })
-                    .collect();
-                let tabs = Tabs::new(titles)
-                    .block(Block::default().borders(Borders::ALL).title("Tabs"))
-                    .select(app.tabs.index)
-                    .highlight_style(
-                        Style::default()
-                            .add_modifier(Modifier::BOLD)
-                            .bg(Color::DarkGray)
-                    );
-                f.render_widget(tabs, chunks[0]);
+
+                let header_chunks = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                    .split(chunks[0]);
+
+                // View tabs
+                draw_tabs(f, header_chunks[0], &app);
+
+                // Channel tabs
+                app.channels.render(f, header_chunks[1]);
         
     
                 let renderer = match app.tabs.index {
@@ -171,10 +191,9 @@ fn main() ->  Result<(), io::Error> {
                     _ => unreachable!()
                 };
                 
-    
                 // Channel drawing
-                for ch_idx in 0..channels {
-                    renderer.draw(f, ch_idx, chunks[ch_idx + 1]);
+                for (chunk_idx, (ch_idx, ch_title)) in activated_channels.iter().enumerate() {
+                    renderer.draw(f, *ch_idx, ch_title, chunks[chunk_idx + 1]);
                 }
             
             })?;
@@ -198,6 +217,46 @@ fn main() ->  Result<(), io::Error> {
                         app.tabs.previous();
                         app.repaint = true;
                     },
+                    Key::Char('1') =>  {
+                        app.channels.update(0);
+                        app.repaint = true;
+                    },
+                    Key::Char('2') =>  {
+                        app.channels.update(1);
+                        app.repaint = true;
+                    },
+                    Key::Char('3') =>  {
+                        app.channels.update(2);
+                        app.repaint = true;
+                    },
+                    Key::Char('4') =>  {
+                        app.channels.update(3);
+                        app.repaint = true;
+                    },
+                    Key::Char('5') =>  {
+                        app.channels.update(4);
+                        app.repaint = true;
+                    },
+                    Key::Char('6') =>  {
+                        app.channels.update(5);
+                        app.repaint = true;
+                    },
+                    Key::Char('7') =>  {
+                        app.channels.update(6);
+                        app.repaint = true;
+                    },
+                    Key::Char('8') =>  {
+                        app.channels.update(7);
+                        app.repaint = true;
+                    },
+                    Key::Char('9') =>  {
+                        app.channels.update(8);
+                        app.repaint = true;
+                    },
+                    Key::Esc => {
+                        app.channels.reset();
+                        app.repaint = true;
+                    }
                     _ => {}
                 }
 
@@ -207,21 +266,6 @@ fn main() ->  Result<(), io::Error> {
             },
         }
     }
-
-
-    
-    
-
-    // // let shape = Shape::Bars();
-    // let graph_height: u32 = u32::max(height.0.into(), 32);
-    // Chart::new_with_y_range((width.0).into(), graph_height, 0., block_count as f32, -1., 1.)
-    //     .lineplot(&Shape::Lines(p_data.as_slice()))
-    //     .lineplot(&Shape::Lines(n_data.as_slice()))
-    //     .display();
-    // Chart::new(block_count.into(), graph_height, 0., block_count as f32)
-    //     .lineplot(&Shape::Lines(p_data.as_slice()))
-    //     .lineplot(&Shape::Lines(n_data.as_slice()))
-    //     .display();
 
     Ok(())
 }

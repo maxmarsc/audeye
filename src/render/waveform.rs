@@ -104,7 +104,7 @@ impl WaveformRenderer {
 }
 
 impl Renderer for WaveformRenderer {
-    fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area : Rect) {
+    fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, title: &str, area : Rect) {
         // Check for end of rendering
         if !self.rendered {
             match self.rendered_rx.try_recv() {
@@ -132,7 +132,7 @@ impl Renderer for WaveformRenderer {
     
         // Draw the canva
         let canva = Canvas::default()
-            .block(Block::default().title(format!["Channel {:?}", channel]).borders(Borders::ALL))
+            .block(Block::default().title(title).borders(Borders::ALL))
             .paint(|ctx| { drawing_method(ctx, &n_int, &p_int); })
             .marker(Marker::Braille)
             .x_bounds([-1., estimated_witdh_res as f64 + 1f64])

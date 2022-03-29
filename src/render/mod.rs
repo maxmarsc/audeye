@@ -3,6 +3,7 @@ pub mod waveform;
 pub mod spectral;
 pub mod ascii;
 pub mod greyscale_canva;
+pub mod headers;
 
 use tui::{Frame, backend::Backend, layout::Rect};
 use waveform::WaveformRenderer;
@@ -15,10 +16,10 @@ pub enum RendererType<'a> {
 }
 
 impl Renderer for RendererType<'_> {
-    fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area : Rect) {
+    fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, title: &str, area : Rect) {
         match self {
-            RendererType::Waveform(renderer) => renderer.draw(frame, channel, area),
-            RendererType::Spectral(renderer) => renderer.draw(frame, channel, area)
+            RendererType::Waveform(renderer) => renderer.draw(frame, channel, title,  area),
+            RendererType::Spectral(renderer) => renderer.draw(frame, channel, title,  area)
         }
     }
 }
