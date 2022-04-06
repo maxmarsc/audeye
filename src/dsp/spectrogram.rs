@@ -14,9 +14,12 @@ use rayon::prelude::*;
 
 // use super::compute_spectrogram;
 use super::time_window::Batcher;
+use super::DspData;
 
 const HANN_FACTOR: f64 = 2f64; // 2²
 const DB_MIN_THRESHOLD: f64 = -130f64; // -120dB
+const WINDOW_SIZE: usize = 4096;
+const OVERLAP_RATE: f64 = 0.75;
 
 #[inline(always)]
 fn db_to_u8(db: f64) -> u8 {
@@ -42,11 +45,11 @@ pub struct Spectrogram {
 }
 
 
-impl Spectrogram{
-    pub fn new(sndfile: SndFile, twindow_size: usize, overlap_size: f64) -> Spectrogram {
+impl DspData for Spectrogram{
+    fn new(sndfile: SndFile) -> Spectrogram {
         let channels = sndfile.get_channels();
-        let mut window_batcher = Batcher::new(sndfile, twindow_size, overlap_size);
-        let num_bins = twindow_size / 2;
+        let mut window_batcher = Batcher::new(sndfile, WINDOW_SIZE, OVERLAP_RATE);
+        let num_bins = WINDOW_SIZE / 2;
         let num_bands = window_batcher.get_num_bands();
 
         // Allocate the memory for the u8 spectrograms
@@ -54,13 +57,13 @@ impl Spectrogram{
 
         // Plan the fft
         let mut planner = RealFftPlanner::<f64>::new();
-        let r2c = planner.plan_fft_forward(twindow_size);
+        let r2c = planner.plan_fft_forward(WINDOW_SIZE);
         let mut spectrum = r2c.make_output_vec();
         let mut scratch  = r2c.make_scratch_vec();
 
         // Compute the Spectrogram
         let mut batch_idx = 0 as usize;
-        let fft_len = twindow_size as f64 / 2f64;
+        let fft_len = WINDOW_SIZE as f64 / 2f64;
 
 
         loop {
@@ -70,7 +73,7 @@ impl Spectrogram{
             };
 
             // // Perfect sine
-            // let phi = 2f64 * std::f64::consts::PI / twindow_size as f64 * 4f64;
+            // let phi = 2f64 * std::f64::consts::PI / WINDOW_SIZE as f64 * 4f64;
             // for channel in batchs.iter_mut() {
             //     channel[0] = 1f64;
             //     for (idx,value) in channel[1..].iter_mut().enumerate() {
@@ -115,7 +118,9 @@ impl Spectrogram{
             frames: spectrograms_u8
         }
     }
+}
 
+impl Spectrogram {
     pub fn data(&mut self, channel :usize) -> &mut [u8] {
         self.frames[channel].as_mut_slice()
     }

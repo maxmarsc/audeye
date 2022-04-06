@@ -8,6 +8,8 @@ use std::convert::{TryFrom, TryInto};
 
 use rayon::prelude::*;
 
+use super::DspData;
+
 const THRESHOLD: i32 = 0;//1024 * 128;
 
 
@@ -45,8 +47,8 @@ pub struct Waveform {
     frames: Vec<Vec<i32>>
 }
 
-impl Waveform {
-    pub fn new(mut sndfile: SndFile) -> Waveform {
+impl DspData for Waveform {
+    fn new(mut sndfile: SndFile) -> Waveform {
         // Compute block size
         let frames = sndfile.len().expect("Unable to retrieve number of frames");
         sndfile.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
@@ -98,7 +100,9 @@ impl Waveform {
 
         data
     }
+}
 
+impl Waveform {
     pub fn compute_min_max(&self, channel: usize, p: &mut [i32], n: &mut [i32]) {
         if p.len() != n.len() {
             panic!()

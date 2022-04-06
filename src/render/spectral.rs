@@ -1,12 +1,10 @@
-use crate::render::renderer::Renderer;
-use crate::render::ascii::AsciiArtConverter;
-use crate::render::greyscale_canva::TransposedGreyScaleCanva;
+use super::Renderer;
+use super::greyscale_canva::TransposedGreyScaleCanva;
+use super::AsyncRendererData;
+use super::draw_loading;
 use core::panic;
-use std::borrow::Cow;
-use std::default;
-use std::io::SeekFrom;
-use std::task::Context;
 extern crate sndfile;
+// use crate::dsp::AudioRepresentationData;
 use crate::sndfile::{SndFileIO, SndFile};
 use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{self, Receiver, TryRecvError, Sender};
@@ -35,19 +33,11 @@ use crate::dsp::spectrogram::Spectrogram;
 
 use std::num::{NonZeroU32, NonZeroUsize};
 
-use image::codecs::png::PngEncoder;
-use image::io::Reader as ImageReader;
-use image::{ColorType, GenericImageView, DynamicImage};
 use fast_image_resize as fr;
 
-const SPECTRAL_NUANCES: usize = 32;
-
 pub struct SpectralRenderer<'a> {
-    rendered: bool,
     pub channels : usize,
-    data: Option<Spectrogram>,
-    rendered_rx: Receiver<bool>,
-    process_handle: Option<JoinHandle<Spectrogram>>,
+    async_renderer: AsyncRendererData<Spectrogram>,
     resizer: fr::Resizer,
     canva_img: Option<Image<'a>>
 }
@@ -56,21 +46,12 @@ impl<'a> SpectralRenderer<'a> {
     pub fn new(path: &std::path::PathBuf) -> Self {
         let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
             .from_path(path).expect("Could not open wave file");
-        if !snd.is_seekable() {
-            panic!("Input file is not seekable");
-        }
 
         let channels = snd.get_channels();
-        // let (kill_tx, _) = mpsc::channel();
-        let (rendered_tx, rendered_rx) = mpsc::channel();
-        let handle = async_compute(snd, rendered_tx);
         
         SpectralRenderer {
-            rendered: false,
             channels,
-            data: None,
-            rendered_rx,
-            process_handle: Some(handle),
+            async_renderer: AsyncRendererData::new(path),
             resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
             // resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
             canva_img: None
@@ -78,37 +59,21 @@ impl<'a> SpectralRenderer<'a> {
 
     }
 
-    fn load_results(&mut self) {
-        if self.rendered {
-            let opt_handle = self.process_handle.take();
-            match opt_handle {
-                Some(handle) => {
-                    self.data = Some(handle.join().expect("Spectral rendering failed"));
-                },
-                None => panic!("Spectral rendering handle is None")
-            }
-        }
-    }
 }
 
 impl<'a> Renderer for SpectralRenderer<'a> {
     fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area : Rect, block: Block) {
-        // Check for end of rendering
-        if !self.rendered {
-            match self.rendered_rx.try_recv() {
-                Ok(true) => {
-                    self.rendered = true;
-                    self.load_results();
-                },
-                _ => ()
-            }
+        if ! self.async_renderer.rendered() {
+            // Not rendered yet
+            draw_loading(frame, area, block);
+            return;
         }
 
-        if !self.rendered || channel >= self.channels { return; }
+        if channel >= self.channels { panic!(); }
 
         let canva_width = area.width as usize;
         let canva_height = area.height as usize;
-        let data_ref = match self.data.as_mut() {
+        let data_ref = match self.async_renderer.data() {
             Some(data_ref) => data_ref,
             None => panic!()
         };
@@ -158,16 +123,8 @@ impl<'a> Renderer for SpectralRenderer<'a> {
 
         frame.render_widget(canva, area);
     }
+
+    fn needs_redraw(&mut self) -> bool {
+        self.async_renderer.update_status()
+    }
 }
-
-fn async_compute(snd: SndFile, render_tx: Sender<bool>) -> JoinHandle<Spectrogram> {
-    thread::spawn(move || {
-        let data = Spectrogram::new(snd, 4096, 0.75);
-
-        // Send rendered signal
-        let _ = render_tx.send(true);
-
-        data
-    })
-}
-

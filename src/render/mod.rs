@@ -1,14 +1,18 @@
-pub mod renderer;
-pub mod waveform;
-pub mod spectral;
-pub mod ascii;
-pub mod greyscale_canva;
-pub mod headers;
+mod renderer;
+mod waveform;
+mod spectral;
+// mod ascii;
+mod greyscale_canva;
+mod headers;
 
 use tui::{Frame, backend::Backend, layout::Rect, widgets::Block};
-use waveform::WaveformRenderer;
-use spectral::SpectralRenderer;
-use renderer::Renderer;
+pub use waveform::WaveformRenderer;
+pub use spectral::SpectralRenderer;
+pub use renderer::Renderer;
+pub use headers::ChannelsTabs;
+
+use renderer::AsyncRendererData;
+use renderer::draw_loading;
 
 pub enum RendererType<'a> {
     Waveform(WaveformRenderer),
@@ -20,6 +24,13 @@ impl Renderer for RendererType<'_> {
         match self {
             RendererType::Waveform(renderer) => renderer.draw(frame, channel,  area, block),
             RendererType::Spectral(renderer) => renderer.draw(frame, channel,  area, block)
+        }
+    }
+
+    fn needs_redraw(&mut self) -> bool {
+        match self {
+            RendererType::Waveform(renderer) => renderer.needs_redraw(),
+            RendererType::Spectral(renderer) => renderer.needs_redraw()
         }
     }
 }

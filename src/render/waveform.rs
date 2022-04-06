@@ -1,4 +1,6 @@
-use crate::render::renderer::Renderer;
+use super::Renderer;
+use super::AsyncRendererData;
+use super::draw_loading;
 use core::panic;
 extern crate sndfile;
 use crate::sndfile::SndFile;
@@ -61,65 +63,37 @@ fn draw_filled_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
 
 
 pub struct WaveformRenderer {
-    rendered : bool,
     pub channels: usize,
-    data : Option<Waveform>,
-    // rendering_buffers: Vec<Vec<
-    rendered_rx: Receiver<bool>,
-    process_handle: Option<JoinHandle<Waveform>>
+    async_renderer: AsyncRendererData<Waveform>
 }
 
 impl WaveformRenderer {
     pub fn new(path: &std::path::PathBuf) -> WaveformRenderer {
         let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
             .from_path(path).expect("Could not open wave file");
-        if !snd.is_seekable() {
-            panic!("Input file is not seekable");
-        }
         
         let channels = snd.get_channels();
-        let (rendered_tx, rendered_rx) = mpsc::channel();
-        let handle = async_compute(snd, rendered_tx);
             
         WaveformRenderer {
-            rendered: false,
             channels,
-            data: None,
-            rendered_rx,
-            process_handle: Some(handle),
-        }
-    }
-
-    fn load_results(&mut self) {
-        if self.rendered {
-            let opt_handle = self.process_handle.take();
-            match opt_handle {
-                Some(handle) => {
-                    self.data = Some(handle.join().expect("Waveform rendering failed"));
-                },
-                None => panic!("Waveform rendering handle is None")
-            }
+            async_renderer: AsyncRendererData::new(path)
         }
     }
 }
 
 impl Renderer for WaveformRenderer {
     fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area : Rect, block: Block) {
-        // Check for end of rendering
-        if !self.rendered {
-            match self.rendered_rx.try_recv() {
-                Ok(true) => {
-                    self.rendered = true;
-                    self.load_results();
-                },
-                _ => ()
-            }
+        if ! self.async_renderer.rendered() {
+            // Not rendered yet
+            draw_loading(frame, area, block);
+            return;
         }
 
-        if !self.rendered || channel >= self.channels { return; }
+        if channel >= self.channels { panic!(); }
+
 
         // Prepare
-        let data_ref = self.data.as_ref().unwrap();
+        let data_ref = self.async_renderer.data().unwrap();
         let canva_width_int = area.width as usize - 2;
         let estimated_witdh_res = canva_width_int * 2;      // Braille res is 2 per char
 
@@ -140,18 +114,10 @@ impl Renderer for WaveformRenderer {
         
         frame.render_widget(canva, area)
     }
+
+    fn needs_redraw(&mut self) -> bool {
+        self.async_renderer.update_status()
+    }
 }
 
-
-fn async_compute(snd: SndFile, rendered_tx: Sender<bool>) -> JoinHandle<Waveform> {
-
-    thread::spawn(move || {
-        let data = Waveform::new(snd);
-    
-        // Send rendered signal
-        let _ = rendered_tx.send(true);
-        
-        data
-    })
-}
 

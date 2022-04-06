@@ -15,8 +15,8 @@ use std::convert::TryInto;
 use std::thread::panicking;
 use std::cmp::max;
 extern crate sndfile;
-use crate::render::renderer;
-use crate::render::waveform;
+// use crate::render::renderer;
+// use crate::render::waveform;
 use crate::sndfile::SndFileIO;
 use std::io::{Error, ErrorKind};
 
@@ -30,11 +30,11 @@ use crate::r#mod::{
 };
 
 mod render;
-use crate::render::renderer::Renderer;
-use crate::render::waveform::WaveformRenderer;
-use crate::render::spectral::SpectralRenderer;
-use crate::render::RendererType;
-use crate::render::headers::ChannelsTabs;
+use render::Renderer;
+use render::WaveformRenderer;
+use render::SpectralRenderer;
+use render::RendererType;
+use render::ChannelsTabs;
 // use crate::util::
 
 // mod dsp;
@@ -152,7 +152,13 @@ fn main() ->  Result<(), io::Error> {
         // Get current size
         let tsize = terminal.size()?;
 
-        if app.repaint || (tsize != app.previous_frame) {
+        let renderer = match app.tabs.index {
+            0 => &mut waveform,
+            1 => &mut spectral,
+            _ => unreachable!()
+        };
+
+        if app.repaint || renderer.needs_redraw() || (tsize != app.previous_frame) {
             terminal.draw(|f| {
                 // Chunks settings
                 let size = f.size();
@@ -184,14 +190,7 @@ fn main() ->  Result<(), io::Error> {
                 // Channel tabs
                 app.channels.render(f, header_chunks[1]);
         
-    
-                let renderer = match app.tabs.index {
-                    0 => &mut waveform,
-                    1 => &mut spectral,
-                    _ => unreachable!()
-                };
-                
-                // Channel drawing
+                // Audio data drawing
                 for (chunk_idx, (ch_idx, ch_title)) in activated_channels.iter().enumerate() {
                     let ch_block = Block::default().title(*ch_title).borders(Borders::ALL);
                     renderer.draw(f, *ch_idx, chunks[chunk_idx + 1], ch_block);
