@@ -193,7 +193,8 @@ fn main() ->  Result<(), io::Error> {
                 
                 // Channel drawing
                 for (chunk_idx, (ch_idx, ch_title)) in activated_channels.iter().enumerate() {
-                    renderer.draw(f, *ch_idx, ch_title, chunks[chunk_idx + 1]);
+                    let ch_block = Block::default().title(*ch_title).borders(Borders::ALL);
+                    renderer.draw(f, *ch_idx, chunks[chunk_idx + 1], ch_block);
                 }
             
             })?;
