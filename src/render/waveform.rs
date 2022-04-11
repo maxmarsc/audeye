@@ -1,5 +1,5 @@
 use super::Renderer;
-use super::AsyncRendererData;
+// use super::AsyncDspData;
 use super::draw_loading;
 use core::panic;
 extern crate sndfile;
@@ -18,7 +18,7 @@ use tui::{
     Frame
 };
 
-use crate::dsp::waveform::Waveform;
+use crate::dsp::{Waveform, AsyncDspData};
 
 fn draw_outlined_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
     let mut previous_idx = 0usize;
@@ -64,7 +64,7 @@ fn draw_filled_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
 
 pub struct WaveformRenderer {
     pub channels: usize,
-    async_renderer: AsyncRendererData<Waveform>
+    async_renderer: AsyncDspData<Waveform>
 }
 
 impl WaveformRenderer {
@@ -76,7 +76,7 @@ impl WaveformRenderer {
             
         WaveformRenderer {
             channels,
-            async_renderer: AsyncRendererData::new(path)
+            async_renderer: AsyncDspData::new(path)
         }
     }
 }

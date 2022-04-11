@@ -1,6 +1,6 @@
 use super::Renderer;
 use super::greyscale_canva::TransposedGreyScaleCanva;
-use super::AsyncRendererData;
+// use crate::dsp::AsyncDspData;
 use super::draw_loading;
 use core::panic;
 extern crate sndfile;
@@ -29,7 +29,7 @@ use tui::{
 // use viuer::{print_from_file, Config};
 
 use crate::utils::filled_rectangle::FilledRectangle;
-use crate::dsp::spectrogram::Spectrogram;
+use crate::dsp::{Spectrogram, AsyncDspData};
 
 use std::num::{NonZeroU32, NonZeroUsize};
 
@@ -37,7 +37,7 @@ use fast_image_resize as fr;
 
 pub struct SpectralRenderer<'a> {
     pub channels : usize,
-    async_renderer: AsyncRendererData<Spectrogram>,
+    async_renderer: AsyncDspData<Spectrogram>,
     resizer: fr::Resizer,
     canva_img: Option<Image<'a>>
 }
@@ -51,7 +51,7 @@ impl<'a> SpectralRenderer<'a> {
         
         SpectralRenderer {
             channels,
-            async_renderer: AsyncRendererData::new(path),
+            async_renderer: AsyncDspData::new(path),
             resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
             // resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
             canva_img: None

@@ -1,13 +1,8 @@
-pub mod spectrogram;
+mod spectrogram;
 mod time_window;
-pub mod waveform;
+mod waveform;
+mod data;
 
 pub use spectrogram::Spectrogram;
 pub use waveform::Waveform;
-
-extern crate sndfile;
-use crate::sndfile::SndFile;
-
-pub trait DspData {
-    fn new(file: SndFile) -> Self;
-}
+pub use data::{DspData, AsyncDspData};
