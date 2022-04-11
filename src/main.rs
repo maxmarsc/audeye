@@ -12,9 +12,11 @@ use tui::widgets::GraphType;
 use std::convert::From;
 use std::convert::TryFrom;
 use std::convert::TryInto;
+// use std::ptr::metadata;
 use std::thread::panicking;
 use std::cmp::max;
 extern crate sndfile;
+use crate::render::MetadataRenderer;
 // use crate::render::renderer;
 // use crate::render::waveform;
 use crate::sndfile::SndFileIO;
@@ -129,6 +131,7 @@ fn main() ->  Result<(), io::Error> {
 
     let waveform_render = WaveformRenderer::new(&args.path);
     let spectral_render = SpectralRenderer::new(&args.path);
+    let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));
     let channels = waveform_render.channels;
     if channels > 9usize {
         let err = Error::new(ErrorKind::InvalidInput, 
@@ -138,7 +141,7 @@ fn main() ->  Result<(), io::Error> {
 
     const tab_size: u16 = 3;
     let mut app = App {
-        tabs: TabsState::new(vec!["Waveform", "Spectral"]),
+        tabs: TabsState::new(vec!["Waveform", "Spectral", "Metadata"]),
         channels: ChannelsTabs::new(channels),
         previous_frame: Rect::default(),
         repaint: true
@@ -155,6 +158,7 @@ fn main() ->  Result<(), io::Error> {
         let renderer = match app.tabs.index {
             0 => &mut waveform,
             1 => &mut spectral,
+            2 => &mut metadata_render,
             _ => unreachable!()
         };
 
