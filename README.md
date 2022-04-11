@@ -4,7 +4,7 @@ Milestone
  - [x] Channels view navigation
  - [x] Channel naming (stereo, 2.1, 5.1, 7.1 ...)
  - [ ] Zoom in/out
- - [ ] Metadata view
+ - [x] Metadata view
  - [ ] RMS and Peak in waveform view
  - [ ] Option : normalize
  - [ ] Option :  FFT dB threshold
