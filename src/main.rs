@@ -31,6 +31,9 @@ use crate::r#mod::{
     TabsState
 };
 
+mod utils;
+// use utils::TabsState;
+
 mod render;
 use render::Renderer;
 use render::WaveformRenderer;
@@ -42,7 +45,6 @@ use render::ChannelsTabs;
 // mod dsp;
 // use crate::dsp::spectrogram::compute_spectrogram;
 
-mod utils;
 mod dsp;
 
 // use crate::util::event::{Config, Event, Events};
@@ -174,10 +176,10 @@ fn main() ->  Result<(), io::Error> {
                 let channel_rn = u32::from(f.size().height - tab_size);
     
                 // TODO: find a way to do it without mut
-                let mut layout_constraints = vec![
-                    Constraint::Ratio(channel_rn, channel_rd); (chunk_count+1) as usize
+                let layout_constraints = vec![
+                    Constraint::Length(3), Constraint::Min(3)
                 ];
-                layout_constraints[0] = Constraint::Length(tab_size);
+                // layout_constraints[0] = Constraint::Length(tab_size);
                 let chunks = Layout::default()
                     .direction(Direction::Vertical)
                     .constraints(layout_constraints.as_ref())
@@ -195,10 +197,11 @@ fn main() ->  Result<(), io::Error> {
                 app.channels.render(f, header_chunks[1]);
         
                 // Audio data drawing
-                for (chunk_idx, (ch_idx, ch_title)) in activated_channels.iter().enumerate() {
-                    let ch_block = Block::default().title(*ch_title).borders(Borders::ALL);
-                    renderer.draw(f, *ch_idx, chunks[chunk_idx + 1], ch_block);
-                }
+                renderer.draw(f, &activated_channels, chunks[1]);
+                // for (chunk_idx, (ch_idx, ch_title)) in activated_channels.iter().enumerate() {
+                //     let ch_block = Block::default().title(*ch_title).borders(Borders::ALL);
+                //     renderer.draw(f, *ch_idx, chunks[chunk_idx + 1], ch_block);
+                // }
             
             })?;
         }

@@ -6,7 +6,7 @@ use tui::text::Span;
 use tui::{backend::Backend, text::Spans};
 use tui::Frame;
 use tui::layout::{Rect, Alignment};
-use tui::widgets::{Block, Paragraph};
+use tui::widgets::{Block, Paragraph, Borders};
 
 use std::fmt::{self, Display};
 
@@ -167,7 +167,7 @@ impl MetadataRenderer {
 }
 
 impl Renderer for MetadataRenderer {
-    fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, _: usize, area : Rect, block: Block) {
+    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, _: &Vec<(usize, &str)>, area : Rect) {
         let name_style = Style::default().add_modifier(Modifier::BOLD);
         let value_style = Style::default();
 
@@ -203,7 +203,7 @@ impl Renderer for MetadataRenderer {
             .collect();
 
         let paragraph = Paragraph::new(spans)
-            .block(block)
+            .block(Block::default().title("Metadata").borders(Borders::ALL))
             .alignment(Alignment::Left);
 
         frame.render_widget(paragraph, area);

@@ -1,6 +1,6 @@
 use super::Renderer;
 // use super::AsyncDspData;
-use super::draw_loading;
+use super::{draw_loading, draw_activated_channels};
 use core::panic;
 extern crate sndfile;
 use crate::sndfile::SndFile;
@@ -82,37 +82,40 @@ impl WaveformRenderer {
 }
 
 impl Renderer for WaveformRenderer {
-    fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area : Rect, block: Block) {
-        if ! self.async_renderer.rendered() {
-            // Not rendered yet
-            draw_loading(frame, area, block);
-            return;
-        }
+    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, activated_channels: &Vec<(usize, &str)>, area : Rect) {
+        let mut single_channel_closure = |frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block| {
+            if ! self.async_renderer.rendered() {
+                // Not rendered yet
+                draw_loading(frame, area, block);
+                return;
+            }
 
-        if channel >= self.channels { panic!(); }
+            if channel >= self.channels { panic!(); }
 
+            // Prepare
+            let data_ref = self.async_renderer.data().unwrap();
+            let canva_width_int = area.width as usize - 2;
+            let estimated_witdh_res = canva_width_int * 2;      // Braille res is 2 per char
 
-        // Prepare
-        let data_ref = self.async_renderer.data().unwrap();
-        let canva_width_int = area.width as usize - 2;
-        let estimated_witdh_res = canva_width_int * 2;      // Braille res is 2 per char
+            // Compute local min & max for each block
+            let (mut n_int, mut p_int) = (vec![0i32; estimated_witdh_res],vec![0i32; estimated_witdh_res]);
+            data_ref.compute_min_max(channel, p_int.as_mut_slice(), n_int.as_mut_slice());
 
-        // Compute local min & max for each block
-        let (mut n_int, mut p_int) = (vec![0i32; estimated_witdh_res],vec![0i32; estimated_witdh_res]);
-        data_ref.compute_min_max(channel, p_int.as_mut_slice(), n_int.as_mut_slice());
-
-        // Pick drawing method
-        let drawing_method = draw_filled_shape;
-    
-        // Draw the canva
-        let canva = Canvas::default()
-            .block(block)
-            .paint(|ctx| { drawing_method(ctx, &n_int, &p_int); })
-            .marker(Marker::Braille)
-            .x_bounds([-1., estimated_witdh_res as f64 + 1f64])
-            .y_bounds([i32::MIN as f64, i32::MAX as f64]);
+            // Pick drawing method
+            let drawing_method = draw_filled_shape;
         
-        frame.render_widget(canva, area)
+            // Draw the canva
+            let canva = Canvas::default()
+                .block(block)
+                .paint(|ctx| { drawing_method(ctx, &n_int, &p_int); })
+                .marker(Marker::Braille)
+                .x_bounds([-1., estimated_witdh_res as f64 + 1f64])
+                .y_bounds([i32::MIN as f64, i32::MAX as f64]);
+            
+            frame.render_widget(canva, area)
+        };
+
+        draw_activated_channels(frame, area, activated_channels, &mut single_channel_closure);
     }
 
     fn needs_redraw(&mut self) -> bool {
