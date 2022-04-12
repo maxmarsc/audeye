@@ -14,7 +14,7 @@ use std::convert::TryFrom;
 extern crate sndfile;
 use crate::sndfile::{SndFile, TagType};
 
-use super::Renderer;
+use super::{RenderingInfo, Renderer};
 
 
 fn format_to_string(fmt : MajorFormat) -> String {
@@ -179,7 +179,7 @@ impl MetadataRenderer {
 }
 
 impl Renderer for MetadataRenderer {
-    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, _: &Vec<(usize, &str)>, area : Rect) {
+    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, _: &RenderingInfo, area : Rect) {
         let name_style = Style::default().add_modifier(Modifier::BOLD);
         let value_style = Style::default();
 

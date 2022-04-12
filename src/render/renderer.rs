@@ -12,15 +12,36 @@ use std::convert::TryFrom;
 
 use super::ChannelsTabs;
 
-pub trait Renderer {
-    // fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, channel: usize, area : Rect, block: Block<'_>);
-    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, activated_channels: &Vec<(usize, &str)>, area : Rect);
 
-    // fn render_channel<B : Backend>(&mut self, _: &mut Frame<'_, B>, _: usize, _ : Rect, _: Block<'_>) {
-    //     // default blank implementation
-    // }
+pub struct RenderingInfo<'a> {
+    pub activated_channels: Vec<(usize, &'a str)>
+}
+
+pub trait Renderer {
+    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, info: &RenderingInfo, area : Rect);
 
     fn needs_redraw(&mut self) -> bool;
+}
+
+pub trait ChannelRenderer : Renderer {
+    fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block);
+
+    fn needs_redraw(&mut self) -> bool;
+}
+
+impl<T : ChannelRenderer> Renderer for T {
+    fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, info: &RenderingInfo, area : Rect) {
+        let layout = compute_channels_layout(area, info.activated_channels.len());
+    
+        for (activated_idx, (ch_idx, title)) in info.activated_channels.iter().enumerate() {
+            let block = Block::default().title(*title).borders(Borders::ALL);
+            self.draw_single_channel(frame, *ch_idx, layout[activated_idx], block);
+        }
+    }
+
+    fn needs_redraw(&mut self) -> bool {
+        ChannelRenderer::needs_redraw(self)
+    }
 }
 
 pub fn draw_loading<B : Backend>(frame: &mut Frame<'_, B>, area : Rect, block: Block<'_>) {
@@ -46,17 +67,4 @@ fn compute_channels_layout(area: Rect, num_channels: usize) -> Vec<Rect> {
         .direction(Direction::Vertical)
         .constraints(constraints.as_ref())
         .split(area)
-}
-
-pub fn draw_activated_channels<B : Backend>(
-        frame: &mut Frame<'_, B>,
-        area: Rect,
-        activated_channels: &Vec<(usize, &str)>,
-        single_channel_draw_fn: &mut dyn FnMut(&mut Frame<'_, B>, usize, Rect, Block)) {
-    let layout = compute_channels_layout(area, activated_channels.len());
-    
-    for (activated_idx, (ch_idx, title)) in activated_channels.iter().enumerate() {
-        let block = Block::default().title(*title).borders(Borders::ALL);
-        single_channel_draw_fn(frame, *ch_idx, layout[activated_idx], block);
-    }
 }

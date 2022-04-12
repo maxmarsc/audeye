@@ -10,12 +10,10 @@ use tui::{Frame, backend::Backend, layout::Rect, widgets::Block};
 pub use waveform::WaveformRenderer;
 pub use spectral::SpectralRenderer;
 pub use metadata::MetadataRenderer;
-pub use renderer::Renderer;
+pub use renderer::{Renderer, RenderingInfo};
 pub use headers::ChannelsTabs;
 
-// use renderer::AsyncRendererData;
-// use crate::dsp::AsyncDspData;
-use renderer::{draw_loading, draw_activated_channels};
+use renderer::{draw_loading};
 
 pub enum RendererType<'a> {
     Waveform(WaveformRenderer),
@@ -23,30 +21,12 @@ pub enum RendererType<'a> {
     Metadata(MetadataRenderer)
 }
 
-// impl Renderer for RendererType<'_> {
-//     fn draw<B : Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area : Rect, block: Block<'_>) {
-//         match self {
-//             RendererType::Waveform(renderer) => renderer.draw(frame, channel,  area, block),
-//             RendererType::Spectral(renderer) => renderer.draw(frame, channel,  area, block),
-//             RendererType::Metadata(renderer) => renderer.draw(frame, channel, area, block)
-//         }
-//     }
-
-//     fn needs_redraw(&mut self) -> bool {
-//         match self {
-//             RendererType::Waveform(renderer) => renderer.needs_redraw(),
-//             RendererType::Spectral(renderer) => renderer.needs_redraw(),
-//             RendererType::Metadata(renderer) => renderer.needs_redraw()
-//         }
-//     }
-// }
-
 impl Renderer for RendererType<'_> {
-    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, activated_channels: &Vec<(usize, &str)>, area : Rect) {
+    fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, info: &RenderingInfo, area : Rect) {
         match self {
-            RendererType::Waveform(renderer) => renderer.draw(frame, activated_channels, area),
-            RendererType::Spectral(renderer) => renderer.draw(frame, activated_channels, area),
-            RendererType::Metadata(renderer) => renderer.draw(frame, activated_channels, area)
+            RendererType::Waveform(renderer) => renderer.draw(frame, info, area),
+            RendererType::Spectral(renderer) => renderer.draw(frame, info, area),
+            RendererType::Metadata(renderer) => renderer.draw(frame, info, area)
         }
     }
 
