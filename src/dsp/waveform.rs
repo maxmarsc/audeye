@@ -103,13 +103,12 @@ impl DspData for Waveform {
 }
 
 impl Waveform {
-    pub fn compute_min_max(&self, channel: usize, p: &mut [i32], n: &mut [i32]) {
-        if p.len() != n.len() {
-            panic!()
-        }
+    pub fn compute_min_max(&self, channel: usize, block_count: usize) -> (Vec<i32>, Vec<i32>) {
+        // Alloc vectors
+        let mut p = vec![0i32; block_count];
+        let mut n = vec![0i32; block_count];
 
         // Compute block size and count
-        let block_count = p.len();
         let frames = self.frames[0].len();
         let mut exact_count = false;
         let block_size = if frames % block_count == 0 {
@@ -135,6 +134,6 @@ impl Waveform {
             (n[block_count - 1], p[block_count - 1]) = get_min_max(remains);
         }
 
-
+        (n, p)
     }
 }

@@ -97,8 +97,7 @@ impl ChannelRenderer for WaveformRenderer {
         let estimated_witdh_res = canva_width_int * 2;      // Braille res is 2 per char
 
         // Compute local min & max for each block
-        let (mut n_int, mut p_int) = (vec![0i32; estimated_witdh_res],vec![0i32; estimated_witdh_res]);
-        data_ref.compute_min_max(channel, p_int.as_mut_slice(), n_int.as_mut_slice());
+        let (n_int, p_int) = data_ref.compute_min_max(channel, estimated_witdh_res);
 
         // Pick drawing method
         let drawing_method = draw_filled_shape;
