@@ -12,21 +12,28 @@ use std::convert::TryFrom;
 
 use super::ChannelsTabs;
 
+use crate::utils::Zoom;
+
 
 pub struct RenderingInfo<'a> {
-    pub activated_channels: Vec<(usize, &'a str)>
+    pub activated_channels: Vec<(usize, &'a str)>,
+    pub zoom: &'a Zoom
 }
 
 pub trait Renderer {
     fn draw<B : Backend>(&mut self,  frame: &mut Frame<'_, B>, info: &RenderingInfo, area : Rect);
 
     fn needs_redraw(&mut self) -> bool;
+    fn max_width_resolution(&self) -> usize {
+        usize::MAX
+    }
 }
 
 pub trait ChannelRenderer : Renderer {
-    fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block);
+    fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block, zoom: &Zoom);
 
     fn needs_redraw(&mut self) -> bool;
+    fn max_width_resolution(&self) -> usize;
 }
 
 impl<T : ChannelRenderer> Renderer for T {
@@ -35,7 +42,7 @@ impl<T : ChannelRenderer> Renderer for T {
     
         for (activated_idx, (ch_idx, title)) in info.activated_channels.iter().enumerate() {
             let block = Block::default().title(*title).borders(Borders::ALL);
-            self.draw_single_channel(frame, *ch_idx, layout[activated_idx], block);
+            self.draw_single_channel(frame, *ch_idx, layout[activated_idx], block, info.zoom);
         }
     }
 

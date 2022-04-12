@@ -4,6 +4,7 @@ use super::{draw_loading, RenderingInfo, renderer::ChannelRenderer};
 use core::panic;
 extern crate sndfile;
 use crate::sndfile::SndFile;
+use crate::utils::Zoom;
 use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{self, Receiver, Sender};
 use tui::backend::{Backend};
@@ -17,6 +18,8 @@ use tui::{
     text::Span,
     Frame
 };
+
+use std::convert::TryFrom;
 
 use crate::dsp::{Waveform, AsyncDspData};
 
@@ -63,26 +66,29 @@ fn draw_filled_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
 
 
 pub struct WaveformRenderer {
-    pub channels: usize,
-    async_renderer: AsyncDspData<Waveform>
+    channels: usize,
+    async_renderer: AsyncDspData<Waveform>,
+    max_width_res: usize
 }
 
 impl WaveformRenderer {
     pub fn new(path: &std::path::PathBuf) -> WaveformRenderer {
-        let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
             .from_path(path).expect("Could not open wave file");
         
         let channels = snd.get_channels();
+        let max_res = usize::try_from(snd.len().unwrap()).unwrap();
             
         WaveformRenderer {
             channels,
-            async_renderer: AsyncDspData::new(path)
+            async_renderer: AsyncDspData::new(path),
+            max_width_res: max_res
         }
     }
 }
 
 impl ChannelRenderer for WaveformRenderer {
-    fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block) {
+    fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block, zoom: &Zoom) {
         if ! self.async_renderer.rendered() {
             // Not rendered yet
             draw_loading(frame, area, block);
@@ -97,7 +103,7 @@ impl ChannelRenderer for WaveformRenderer {
         let estimated_witdh_res = canva_width_int * 2;      // Braille res is 2 per char
 
         // Compute local min & max for each block
-        let (n_int, p_int) = data_ref.compute_min_max(channel, estimated_witdh_res);
+        let (n_int, p_int) = data_ref.compute_min_max(channel, estimated_witdh_res, zoom);
 
         // Pick drawing method
         let drawing_method = draw_filled_shape;
@@ -115,6 +121,10 @@ impl ChannelRenderer for WaveformRenderer {
 
     fn needs_redraw(&mut self) -> bool {
         self.async_renderer.update_status()
+    }
+
+    fn max_width_resolution(&self) -> usize {
+        self.max_width_res
     }
 }
 

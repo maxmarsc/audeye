@@ -9,22 +9,10 @@ use std::convert::{TryFrom, TryInto};
 use rayon::prelude::*;
 
 use super::DspData;
+use crate::utils::Zoom;
 
-const THRESHOLD: i32 = 0;//1024 * 128;
+const THRESHOLD: i32 = 0;
 
-
-// #[repr(C)]
-// struct StereoSample {
-//     l: i32,
-//     r: i32,
-// }
-
-// #[repr(transparent)]
-// struct MonoSample(i32);
-
-// fn interleaved_to_splitted(src: &[StereoSample], left: &mut [MonoSample], right: &mut[MonoSample]) {
-
-// }
 #[inline(always)]
 fn get_min_max(frames: &[i32]) -> (i32, i32) {
     let mut min = 0i32;
@@ -42,8 +30,6 @@ fn get_min_max(frames: &[i32]) -> (i32, i32) {
 }
 
 pub struct Waveform {
-    // p: Vec<Vec<(f64, f64)>>,
-    // n: Vec<Vec<(f64, f64)>>,
     frames: Vec<Vec<i32>>
 }
 
@@ -103,22 +89,23 @@ impl DspData for Waveform {
 }
 
 impl Waveform {
-    pub fn compute_min_max(&self, channel: usize, block_count: usize) -> (Vec<i32>, Vec<i32>) {
+    pub fn compute_min_max(&self, channel: usize, block_count: usize, zoom: &Zoom) -> (Vec<i32>, Vec<i32>) {
         // Alloc vectors
         let mut p = vec![0i32; block_count];
         let mut n = vec![0i32; block_count];
 
         // Compute block size and count
-        let frames = self.frames[0].len();
-        let mut exact_count = false;
-        let block_size = if frames % block_count == 0 {
-            frames / block_count
+        let total_frames = self.frames[0].len();
+        let start = (total_frames as f64 * zoom.start()) as usize;
+        let end = (total_frames as f64 * (zoom.start() + zoom.length())) as usize;
+        let rendered_frames = end - start;
+        let block_size = if rendered_frames % block_count == 0 {
+            rendered_frames / block_count
         } else {
-            exact_count = true;
-            frames / block_count + 1
+            rendered_frames / block_count + 1
         };
 
-        let samples_chunks = self.frames[channel].par_chunks_exact(block_size);
+        let samples_chunks = self.frames[channel][start..end].par_chunks_exact(block_size);
         let remains = samples_chunks.remainder();
 
         n[..block_count].par_iter_mut()
@@ -129,7 +116,7 @@ impl Waveform {
             });
         
 
-        if ! exact_count {
+        if remains.len() > 0 {
             // Consume the end
             (n[block_count - 1], p[block_count - 1]) = get_min_max(remains);
         }

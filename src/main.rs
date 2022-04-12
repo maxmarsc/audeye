@@ -1,4 +1,5 @@
 
+use sndfile::SndFile;
 // use std::fs::File;
 use structopt::StructOpt;
 use hound;
@@ -32,6 +33,7 @@ use crate::r#mod::{
 };
 
 mod utils;
+use utils::Zoom;
 // use utils::TabsState;
 
 mod render;
@@ -71,7 +73,8 @@ struct App<'a> {
     tabs: TabsState<'a>,
     channels: ChannelsTabs,
     previous_frame: Rect,
-    repaint: bool
+    repaint: bool,
+    zoom: Zoom
 }
 
 #[derive(StructOpt)]
@@ -124,34 +127,41 @@ fn main() ->  Result<(), io::Error> {
     let backend = CrosstermBackend::new(stdout);
     // let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+    const tab_size: u16 = 3;
 
     let events = Events::new();
 
-
-    // Compute the size of each block to fit the screen
-    let block_count: usize = 1920 / 4 ;
-
-
-    let waveform_render = WaveformRenderer::new(&args.path);
-    let spectral_render = SpectralRenderer::new(&args.path);
-    let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));
-    let channels = waveform_render.channels;
+    // Check file info
+    let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+            .from_path(&args.path).expect("Could not open wave file");
+    let channels = snd.get_channels();
     if channels > 9usize {
         let err = Error::new(ErrorKind::InvalidInput, 
                 "Audeye does not support configuration with more than 9 channels");
         return Err(err);
     }
 
-    const tab_size: u16 = 3;
+    // Create the renderers
+    // let waveform_renderer = WaveformRenderer::new(&args.path);
+    // let spectral_renderer = SpectralRenderer::new(&args.path);
+    let mut waveform = RendererType::Waveform(WaveformRenderer::new(&args.path));
+    let mut spectral = RendererType::Spectral(SpectralRenderer::new(&args.path));
+    let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));
+
+
+    // Build the app
+    // Compute the max zoom allowed
+    // let res_max = usize::min(waveform.max_width_resolution(), spectral.max_width_resolution()) as f64;
+    // let frames = snd.len().unwrap() as f64;
+
+
     let mut app = App {
         tabs: TabsState::new(vec!["Waveform", "Spectral", "Metadata"]),
         channels: ChannelsTabs::new(channels),
         previous_frame: Rect::default(),
-        repaint: true
+        repaint: true,
+        zoom: Zoom::new(0.01f64).unwrap()
     };
-
-    let mut waveform = RendererType::Waveform(waveform_render);
-    let mut spectral = RendererType::Spectral(spectral_render);
 
 
     loop {
@@ -170,19 +180,10 @@ fn main() ->  Result<(), io::Error> {
                 // Chunks settings
                 let size = f.size();
 
-                // Get activated channels and setup their layout
-                // let activated_channels = app.channels.activated();
-                let rendering_info = RenderingInfo {
-                    activated_channels: app.channels.activated()
-                };
-    
-                // TODO: find a way to do it without mut
-                let layout_constraints = vec![
-                    Constraint::Length(3), Constraint::Min(3)
-                ];
+                // Setup headers and view layout
                 let chunks = Layout::default()
                     .direction(Direction::Vertical)
-                    .constraints(layout_constraints.as_ref())
+                    .constraints([Constraint::Length(tab_size), Constraint::Min(3)])
                     .split(size);
 
                 let header_chunks = Layout::default()
@@ -196,7 +197,13 @@ fn main() ->  Result<(), io::Error> {
                 // Channel tabs
                 app.channels.render(f, header_chunks[1]);
         
-                // Audio data drawing
+                // Build rendering info structure for the renderers
+                let rendering_info = RenderingInfo {
+                    activated_channels: app.channels.activated(),
+                    zoom: &app.zoom
+                };
+
+                // Renderer view drawing
                 renderer.draw(f, &rendering_info, chunks[1]);
             })?;
         }
@@ -258,7 +265,23 @@ fn main() ->  Result<(), io::Error> {
                     Key::Esc => {
                         app.channels.reset();
                         app.repaint = true;
-                    }
+                    },
+                    Key::Char('h') => {
+                        app.zoom.move_left();
+                        app.repaint = true;
+                    },
+                    Key::Char('l') => {
+                        app.zoom.move_right();
+                        app.repaint = true;
+                    },
+                    Key::Char('j') => {
+                        app.zoom.zoom_out();
+                        app.repaint = true;
+                    },
+                    Key::Char('k') => {
+                        app.zoom.zoom_in();
+                        app.repaint = true;
+                    },
                     _ => {}
                 }
 

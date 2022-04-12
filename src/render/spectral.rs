@@ -6,6 +6,7 @@ use core::panic;
 extern crate sndfile;
 // use crate::dsp::AudioRepresentationData;
 use crate::sndfile::{SndFileIO, SndFile};
+use crate::utils::Zoom;
 use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{self, Receiver, TryRecvError, Sender};
 use std::convert::{TryFrom, TryInto};
@@ -36,31 +37,35 @@ use std::num::{NonZeroU32, NonZeroUsize};
 use fast_image_resize as fr;
 
 pub struct SpectralRenderer<'a> {
-    pub channels : usize,
+    channels : usize,
     async_renderer: AsyncDspData<Spectrogram>,
     resizer: fr::Resizer,
-    canva_img: Option<Image<'a>>
+    canva_img: Option<Image<'a>>,
+    max_width_resolution: usize
 }
 
 impl<'a> SpectralRenderer<'a> {
     pub fn new(path: &std::path::PathBuf) -> Self {
-        let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
             .from_path(path).expect("Could not open wave file");
 
         let channels = snd.get_channels();
+        // Nasty shit, should be done properly
+        let max_res = snd.len().unwrap() / (4096f64 * 0.25f64) as u64;
         
         SpectralRenderer {
             channels,
             async_renderer: AsyncDspData::new(path),
             resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
             // resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
-            canva_img: None
+            canva_img: None,
+            max_width_resolution: usize::try_from(max_res).unwrap()
         }
     }
 }
 
 impl<'a> ChannelRenderer for SpectralRenderer<'a> {
-    fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block) {
+    fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block, zoom: &Zoom) {
         if ! self.async_renderer.rendered() {
             // Not rendered yet
             draw_loading(frame, area, block);
@@ -77,10 +82,12 @@ impl<'a> ChannelRenderer for SpectralRenderer<'a> {
         };
 
         // Create source image from spectrogram
+        let num_bins = data_ref.num_bins();
+        let (data_slice, num_bands) = data_ref.data(channel, zoom);
         let src_image = fr::Image::from_slice_u8(
-            NonZeroU32::new(data_ref.num_bins().try_into().unwrap()).unwrap(),
-            NonZeroU32::new(data_ref.num_bands().try_into().unwrap()).unwrap(),
-            data_ref.data(channel),
+            NonZeroU32::new(num_bins.try_into().unwrap()).unwrap(),
+            NonZeroU32::new(num_bands.try_into().unwrap()).unwrap(),
+            data_slice,
             fr::PixelType::U8,
         )
         .unwrap();
@@ -124,5 +131,10 @@ impl<'a> ChannelRenderer for SpectralRenderer<'a> {
 
     fn needs_redraw(&mut self) -> bool {
         self.async_renderer.update_status()
+    }
+
+    fn max_width_resolution(&self) -> usize {
+        // nasty, should rely on the same variables as the time window generator
+        self.max_width_resolution
     }
 }

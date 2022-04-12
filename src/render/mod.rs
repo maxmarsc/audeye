@@ -37,4 +37,12 @@ impl Renderer for RendererType<'_> {
             RendererType::Metadata(renderer) => renderer.needs_redraw()
         }
     }
+
+    fn max_width_resolution(&self) -> usize {
+        match self {
+            RendererType::Waveform(renderer) => renderer.max_width_resolution(),
+            RendererType::Spectral(renderer) => renderer.max_width_resolution(),
+            RendererType::Metadata(renderer) => renderer.max_width_resolution()
+        }
+    }
 }

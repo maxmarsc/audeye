@@ -15,6 +15,7 @@ use rayon::prelude::*;
 // use super::compute_spectrogram;
 use super::time_window::Batcher;
 use super::DspData;
+use crate::utils::Zoom;
 
 const HANN_FACTOR: f64 = 2f64; // 2²
 const DB_MIN_THRESHOLD: f64 = -130f64; // -120dB
@@ -121,8 +122,11 @@ impl DspData for Spectrogram{
 }
 
 impl Spectrogram {
-    pub fn data(&mut self, channel :usize) -> &mut [u8] {
-        self.frames[channel].as_mut_slice()
+    pub fn data(&mut self, channel :usize, zoom: &Zoom) -> (&mut [u8], usize) {
+        let start = (self.num_bands as f64 * zoom.start()) as usize;
+        let end = (self.num_bands as f64 * (zoom.start() + zoom.length())) as usize;
+
+        (&mut self.frames[channel][start * self.num_bins..end * self.num_bins], end - start)
     }
 
     pub fn num_bins(&self) -> usize {
