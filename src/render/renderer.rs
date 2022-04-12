@@ -49,6 +49,10 @@ impl<T : ChannelRenderer> Renderer for T {
     fn needs_redraw(&mut self) -> bool {
         ChannelRenderer::needs_redraw(self)
     }
+
+    fn max_width_resolution(&self) -> usize {
+        ChannelRenderer::max_width_resolution(self)
+    }
 }
 
 pub fn draw_loading<B : Backend>(frame: &mut Frame<'_, B>, area : Rect, block: Block<'_>) {

@@ -24,6 +24,29 @@ impl Zoom {
         self.length
     }
 
+    pub fn update_zoom_max(&mut self, max: f64) {
+        self.min = max;
+
+        // Already above the limit, nothing to change
+        if self.length >= max {
+            return;
+        }
+
+        // Under the new limit, need to update the current state
+        let mut center = self.start + self.length / 2f64;
+        self.length = max;
+
+        // Compute if the new center is appropriate or not anymore
+        if center + (self.length / 2f64) > 1f64 {
+            center = 1f64 - (self.length / 2f64);
+        } else if center - (self.length / 2f64) < 0f64{
+            center = self.length / 2f64;
+        }
+
+        self.start = center - self.length / 2f64;
+
+    }
+
     pub fn zoom_in(&mut self) {
         let center = self.start + self.length / 2f64;
 

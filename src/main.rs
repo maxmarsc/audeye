@@ -120,7 +120,7 @@ fn draw_tabs<B: Backend>(frame: &mut Frame<'_, B>, area : Rect, app: &App) {
 
 fn draw_zoom_head<B: Backend>(frame: &mut Frame<'_, B>, area : Rect, zoom_start: f64, zoom_len: f64) {
     let canva = Canvas::default()
-            .background_color(Color::Rgb(32,32,32))
+            .background_color(Color::Rgb(16,16,16))
             .block(Block::default().borders(Borders::TOP | Borders::BOTTOM))
             .paint(|ctx| {
                 ctx.draw(&Rectangle{
@@ -150,12 +150,12 @@ fn main() ->  Result<(), io::Error> {
     let backend = CrosstermBackend::new(stdout);
     // let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    const tab_size: u16 = 3;
+    const TAB_SIZE: u16 = 3;
 
     let events = Events::new();
 
     // Check file info
-    let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+    let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
             .from_path(&args.path).expect("Could not open wave file");
     let channels = snd.get_channels();
     if channels > 9usize {
@@ -165,8 +165,6 @@ fn main() ->  Result<(), io::Error> {
     }
 
     // Create the renderers
-    // let waveform_renderer = WaveformRenderer::new(&args.path);
-    // let spectral_renderer = SpectralRenderer::new(&args.path);
     let mut waveform = RendererType::Waveform(WaveformRenderer::new(&args.path));
     let mut spectral = RendererType::Spectral(SpectralRenderer::new(&args.path));
     let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));
@@ -174,16 +172,14 @@ fn main() ->  Result<(), io::Error> {
 
     // Build the app
     // Compute the max zoom allowed
-    // let res_max = usize::min(waveform.max_width_resolution(), spectral.max_width_resolution()) as f64;
-    // let frames = snd.len().unwrap() as f64;
-
+    let res_max = usize::min(waveform.max_width_resolution(), spectral.max_width_resolution()) as f64;
 
     let mut app = App {
         tabs: TabsState::new(vec!["Waveform", "Spectral", "Metadata"]),
         channels: ChannelsTabs::new(channels),
         previous_frame: Rect::default(),
         repaint: true,
-        zoom: Zoom::new(0.01f64).unwrap()
+        zoom: Zoom::new(terminal.size()?.width as f64 / res_max).unwrap()
     };
 
     // let mut zoom_head = ZoomHead::new(&mut app.zoom);
@@ -199,7 +195,13 @@ fn main() ->  Result<(), io::Error> {
             _ => unreachable!()
         };
 
-        if app.repaint || renderer.needs_redraw() || (tsize != app.previous_frame) {
+        if tsize != app.previous_frame {
+            app.repaint = true;
+            let new_max_zoom = terminal.size()?.width as f64 / res_max;
+            app.zoom.update_zoom_max(new_max_zoom);
+        }
+
+        if app.repaint || renderer.needs_redraw() {
             terminal.draw(|f| {
                 // Chunks settings
                 let size = f.size();
@@ -207,7 +209,7 @@ fn main() ->  Result<(), io::Error> {
                 // Setup headers and view layout
                 let chunks = Layout::default()
                     .direction(Direction::Vertical)
-                    .constraints([Constraint::Length(tab_size), Constraint::Min(3)])
+                    .constraints([Constraint::Length(TAB_SIZE), Constraint::Min(3)])
                     .split(size);
 
                 let header_chunks = Layout::default()
