@@ -5,7 +5,38 @@ use tui::Frame;
 use tui::layout::{Rect, Alignment};
 use tui::style::{Modifier, Style, Color};
 use tui::text::{Span, Spans};
+use tui::widgets::canvas::Canvas;
 use tui::widgets::{Paragraph, Borders, Block};
+use tui::widgets::canvas::Rectangle;
+
+use crate::utils::{Zoom, filled_rectangle::FilledRectangle};
+
+pub struct ZoomHead<'a> {
+    zoom: &'a Zoom
+}
+
+impl<'a> ZoomHead<'a> {
+    pub fn new(zoom: &'a Zoom) -> Self {
+        ZoomHead { zoom }
+    }
+
+    pub fn render<B: Backend>(&mut self, frame: &mut Frame<'_, B>, area : Rect) {
+        let canva = Canvas::default()
+            .background_color(Color::Rgb(10, 10, 10))
+            .paint(|ctx| {
+                ctx.draw(&Rectangle{
+                    x: self.zoom.start(),
+                    y: 0f64,
+                    width: self.zoom.length(),
+                    height: 1f64,
+                    color: Color::Red
+                })})
+            .x_bounds([0f64, 1f64])
+            .y_bounds([0f64, 1f64]);
+
+        frame.render_widget(canva, area);
+    }
+}
 
 pub struct ChannelsTabs {
     titles: Vec<String>,

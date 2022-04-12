@@ -11,7 +11,7 @@ pub use waveform::WaveformRenderer;
 pub use spectral::SpectralRenderer;
 pub use metadata::MetadataRenderer;
 pub use renderer::{Renderer, RenderingInfo};
-pub use headers::ChannelsTabs;
+pub use headers::{ChannelsTabs, ZoomHead};
 
 use renderer::{draw_loading};
 

@@ -18,6 +18,7 @@ use std::thread::panicking;
 use std::cmp::max;
 extern crate sndfile;
 use crate::render::MetadataRenderer;
+use crate::render::ZoomHead;
 // use crate::render::renderer;
 // use crate::render::waveform;
 use crate::sndfile::SndFileIO;
@@ -69,6 +70,10 @@ use tui::{
     
 };
 
+const WAVEFORM_TAB_IDX: usize = 0;
+const SPECTRAL_TAB_IDX: usize = 1;
+const METADATA_TAB_IDX: usize = 2;
+
 struct App<'a> {
     tabs: TabsState<'a>,
     channels: ChannelsTabs,
@@ -111,6 +116,24 @@ fn draw_tabs<B: Backend>(frame: &mut Frame<'_, B>, area : Rect, app: &App) {
         );
 
     frame.render_widget(tabs, area);
+}
+
+fn draw_zoom_head<B: Backend>(frame: &mut Frame<'_, B>, area : Rect, zoom_start: f64, zoom_len: f64) {
+    let canva = Canvas::default()
+            .background_color(Color::Rgb(32,32,32))
+            .block(Block::default().borders(Borders::TOP | Borders::BOTTOM))
+            .paint(|ctx| {
+                ctx.draw(&Rectangle{
+                    x: zoom_start,
+                    y: 0f64,
+                    width: zoom_len,
+                    height: 1f64,
+                    color: Color::White
+                })})
+            .x_bounds([0f64, 1f64])
+            .y_bounds([0f64, 1f64]);
+
+        frame.render_widget(canva, area);
 }
 
 fn main() ->  Result<(), io::Error> {
@@ -163,15 +186,16 @@ fn main() ->  Result<(), io::Error> {
         zoom: Zoom::new(0.01f64).unwrap()
     };
 
+    // let mut zoom_head = ZoomHead::new(&mut app.zoom);
 
     loop {
         // Get current size
         let tsize = terminal.size()?;
 
         let renderer = match app.tabs.index {
-            0 => &mut waveform,
-            1 => &mut spectral,
-            2 => &mut metadata_render,
+            WAVEFORM_TAB_IDX => &mut waveform,
+            SPECTRAL_TAB_IDX => &mut spectral,
+            METADATA_TAB_IDX => &mut metadata_render,
             _ => unreachable!()
         };
 
@@ -188,14 +212,21 @@ fn main() ->  Result<(), io::Error> {
 
                 let header_chunks = Layout::default()
                     .direction(Direction::Horizontal)
-                    .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                    .constraints([
+                        Constraint::Percentage(33),
+                        Constraint::Percentage(33),
+                        Constraint::Percentage(33)])
                     .split(chunks[0]);
 
                 // View tabs
                 draw_tabs(f, header_chunks[0], &app);
 
+                // Zoom head
+                draw_zoom_head(f, header_chunks[1], app.zoom.start(), app.zoom.length());
+
+
                 // Channel tabs
-                app.channels.render(f, header_chunks[1]);
+                app.channels.render(f, header_chunks[2]);
         
                 // Build rendering info structure for the renderers
                 let rendering_info = RenderingInfo {

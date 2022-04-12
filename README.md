@@ -3,7 +3,7 @@ Milestone
  - [x] Spectogram view
  - [x] Channels view navigation
  - [x] Channel naming (stereo, 2.1, 5.1, 7.1 ...)
- - [ ] Zoom in/out
+ - [x] Zoom in/out
  - [x] Metadata view
  - [ ] RMS and Peak in waveform view
  - [ ] Option : normalize
