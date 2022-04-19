@@ -5,6 +5,7 @@ mod spectral;
 mod metadata;
 mod greyscale_canva;
 mod headers;
+mod help;
 
 use tui::{Frame, backend::Backend, layout::Rect, widgets::Block};
 pub use waveform::WaveformRenderer;
@@ -12,6 +13,7 @@ pub use spectral::SpectralRenderer;
 pub use metadata::MetadataRenderer;
 pub use renderer::{Renderer, RenderingInfo};
 pub use headers::{ChannelsTabs, ZoomHead};
+pub use help::HelperPopup;
 
 use renderer::{draw_loading};
 

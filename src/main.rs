@@ -8,6 +8,7 @@ use tui::Frame;
 use tui::backend::Backend;
 use tui::layout;
 use tui::style::Modifier;
+use tui::widgets::Clear;
 use tui::widgets::Dataset;
 use tui::widgets::GraphType;
 use std::convert::From;
@@ -35,6 +36,7 @@ use crate::r#mod::{
 
 mod utils;
 use utils::Zoom;
+use utils::bindings;
 // use utils::TabsState;
 
 mod render;
@@ -44,6 +46,7 @@ use render::SpectralRenderer;
 use render::RendererType;
 use render::ChannelsTabs;
 use render::RenderingInfo;
+use render::HelperPopup;
 // use crate::util::
 
 // mod dsp;
@@ -79,7 +82,8 @@ struct App<'a> {
     channels: ChannelsTabs,
     previous_frame: Rect,
     repaint: bool,
-    zoom: Zoom
+    zoom: Zoom,
+    helper: HelperPopup
 }
 
 #[derive(StructOpt)]
@@ -136,6 +140,19 @@ fn draw_zoom_head<B: Backend>(frame: &mut Frame<'_, B>, area : Rect, zoom_start:
         frame.render_widget(canva, area);
 }
 
+fn helper_layout(area: Rect) -> Rect {
+    let x_offset = area.width / 4;
+    let y_offset = area.height / 4;
+    
+    Rect {
+        x: area.x + x_offset,
+        y: area.y + y_offset,
+        width: area.width / 2,
+        height: area.height / 2
+    }
+    // Rect { x: (), y: (), width: (), height: () }
+}
+
 fn main() ->  Result<(), io::Error> {
     // Get some infos about the terminal
     // let (width, height) = terminal_size().expect("Unable to get terminal size");
@@ -179,7 +196,8 @@ fn main() ->  Result<(), io::Error> {
         channels: ChannelsTabs::new(channels),
         previous_frame: Rect::default(),
         repaint: true,
-        zoom: Zoom::new(terminal.size()?.width as f64 / res_max).unwrap()
+        zoom: Zoom::new(terminal.size()?.width as f64 / res_max).unwrap(),
+        helper: HelperPopup::default()
     };
 
     // let mut zoom_head = ZoomHead::new(&mut app.zoom);
@@ -206,38 +224,45 @@ fn main() ->  Result<(), io::Error> {
                 // Chunks settings
                 let size = f.size();
 
-                // Setup headers and view layout
-                let chunks = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([Constraint::Length(TAB_SIZE), Constraint::Min(3)])
-                    .split(size);
-
-                let header_chunks = Layout::default()
-                    .direction(Direction::Horizontal)
-                    .constraints([
-                        Constraint::Percentage(33),
-                        Constraint::Percentage(33),
-                        Constraint::Percentage(33)])
-                    .split(chunks[0]);
-
-                // View tabs
-                draw_tabs(f, header_chunks[0], &app);
-
-                // Zoom head
-                draw_zoom_head(f, header_chunks[1], app.zoom.start(), app.zoom.length());
-
-
-                // Channel tabs
-                app.channels.render(f, header_chunks[2]);
-        
                 // Build rendering info structure for the renderers
                 let rendering_info = RenderingInfo {
                     activated_channels: app.channels.activated(),
                     zoom: &app.zoom
                 };
 
+                
+                // Setup headers and view layout
+                let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(TAB_SIZE), Constraint::Min(3)])
+                .split(size);
+                
+                let header_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(33),
+                    Constraint::Percentage(33),
+                    Constraint::Percentage(33)])
+                    .split(chunks[0]);
+                    
+                // View tabs
+                draw_tabs(f, header_chunks[0], &app);
+                
+                // Channel tabs
+                app.channels.render(f, header_chunks[2]);
+
+                // Zoom head
+                draw_zoom_head(f, header_chunks[1], app.zoom.start(), app.zoom.length());         
+                
                 // Renderer view drawing
                 renderer.draw(f, &rendering_info, chunks[1]);
+
+                // Helper menu
+                if app.helper.is_visible() {
+                    let helper_rect = helper_layout(chunks[1]);
+                    f.render_widget(Clear, helper_rect);
+                    app.helper.draw(f, &rendering_info, helper_rect);
+                }
             })?;
         }
         
@@ -250,71 +275,75 @@ fn main() ->  Result<(), io::Error> {
         match event {
             Event::Input(input) => {
                 match input {
-                    Key::Char('q') => break,
-                    Key::Right => {
+                    bindings::QUIT => break,
+                    bindings::NEXT_PANEL => {
                         app.tabs.next();
                         app.repaint = true;
                     },
-                    Key::Left => {
+                    bindings::PREVIOUS_PANEL => {
                         app.tabs.previous();
                         app.repaint = true;
                     },
-                    Key::Char('1') =>  {
+                    bindings::CHANNEL_SELECTOR_1 =>  {
                         app.channels.update(0);
                         app.repaint = true;
                     },
-                    Key::Char('2') =>  {
+                    bindings::CHANNEL_SELECTOR_2 =>  {
                         app.channels.update(1);
                         app.repaint = true;
                     },
-                    Key::Char('3') =>  {
+                    bindings::CHANNEL_SELECTOR_3 =>  {
                         app.channels.update(2);
                         app.repaint = true;
                     },
-                    Key::Char('4') =>  {
+                    bindings::CHANNEL_SELECTOR_4 =>  {
                         app.channels.update(3);
                         app.repaint = true;
                     },
-                    Key::Char('5') =>  {
+                    bindings::CHANNEL_SELECTOR_5 =>  {
                         app.channels.update(4);
                         app.repaint = true;
                     },
-                    Key::Char('6') =>  {
+                    bindings::CHANNEL_SELECTOR_6 =>  {
                         app.channels.update(5);
                         app.repaint = true;
                     },
-                    Key::Char('7') =>  {
+                    bindings::CHANNEL_SELECTOR_7 =>  {
                         app.channels.update(6);
                         app.repaint = true;
                     },
-                    Key::Char('8') =>  {
+                    bindings::CHANNEL_SELECTOR_8 =>  {
                         app.channels.update(7);
                         app.repaint = true;
                     },
-                    Key::Char('9') =>  {
+                    bindings::CHANNEL_SELECTOR_9 =>  {
                         app.channels.update(8);
                         app.repaint = true;
                     },
-                    Key::Esc => {
+                    bindings::CHANNEL_RESET => {
                         app.channels.reset();
                         app.repaint = true;
                     },
-                    Key::Char('h') => {
+                    bindings::MOVE_LEFT => {
                         app.zoom.move_left();
                         app.repaint = true;
                     },
-                    Key::Char('l') => {
+                    bindings::MOVE_RIGHT => {
                         app.zoom.move_right();
                         app.repaint = true;
                     },
-                    Key::Char('j') => {
+                    bindings::ZOOM_OUT => {
                         app.zoom.zoom_out();
                         app.repaint = true;
                     },
-                    Key::Char('k') => {
+                    bindings::ZOOM_IN => {
                         app.zoom.zoom_in();
                         app.repaint = true;
                     },
+                    bindings::HELP => {
+                        app.helper.set_visible(!app.helper.is_visible());
+                        app.repaint = true;
+                    }
                     _ => {}
                 }
 
