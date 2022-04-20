@@ -3,6 +3,6 @@ mod time_window;
 mod waveform;
 mod data;
 
-pub use spectrogram::Spectrogram;
-pub use waveform::Waveform;
-pub use data::{DspData, AsyncDspData};
+pub use spectrogram::{Spectrogram, SpectrogramParameters};
+pub use waveform::{Waveform, WaveformParameters};
+pub use data::{DspData, DspErr, AsyncDspData};

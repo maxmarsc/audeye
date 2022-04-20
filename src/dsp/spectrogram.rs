@@ -14,7 +14,7 @@ use rayon::prelude::*;
 
 // use super::compute_spectrogram;
 use super::time_window::Batcher;
-use super::DspData;
+use super::{DspData, DspErr};
 use crate::utils::Zoom;
 
 const HANN_FACTOR: f64 = 2f64; // 2²
@@ -45,12 +45,19 @@ pub struct Spectrogram {
     frames: Vec<Vec<u8>>
 }
 
+pub struct SpectrogramParameters {
+    pub window_size: usize,
+    pub overlap_rate: f64
+}
 
-impl DspData for Spectrogram{
-    fn new(sndfile: SndFile) -> Spectrogram {
+impl DspData<SpectrogramParameters> for Spectrogram{
+    fn new(sndfile: SndFile, parameters: SpectrogramParameters) -> Result<Spectrogram, DspErr> {
         let channels = sndfile.get_channels();
-        let mut window_batcher = Batcher::new(sndfile, WINDOW_SIZE, OVERLAP_RATE);
-        let num_bins = WINDOW_SIZE / 2;
+        let mut window_batcher = match Batcher::new(sndfile, parameters.window_size, parameters.overlap_rate) {
+            Ok(batcher) => batcher,
+            Err(err) => return Err(err)
+        };
+        let num_bins = parameters.window_size / 2;
         let num_bands = window_batcher.get_num_bands();
 
         // Allocate the memory for the u8 spectrograms
@@ -58,13 +65,13 @@ impl DspData for Spectrogram{
 
         // Plan the fft
         let mut planner = RealFftPlanner::<f64>::new();
-        let r2c = planner.plan_fft_forward(WINDOW_SIZE);
+        let r2c = planner.plan_fft_forward(parameters.window_size);
         let mut spectrum = r2c.make_output_vec();
         let mut scratch  = r2c.make_scratch_vec();
 
         // Compute the Spectrogram
         let mut batch_idx = 0 as usize;
-        let fft_len = WINDOW_SIZE as f64 / 2f64;
+        let fft_len = parameters.window_size as f64 / 2f64;
 
 
         loop {
@@ -113,11 +120,11 @@ impl DspData for Spectrogram{
 
         }
 
-        Spectrogram{
+        Ok(Spectrogram{
             num_bands,
             num_bins,
             frames: spectrograms_u8
-        }
+        })
     }
 }
 

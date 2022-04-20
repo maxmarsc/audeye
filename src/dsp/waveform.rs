@@ -8,7 +8,7 @@ use std::convert::{TryFrom, TryInto};
 
 use rayon::prelude::*;
 
-use super::DspData;
+use super::{DspData, DspErr};
 use crate::utils::Zoom;
 
 const THRESHOLD: i32 = 0;
@@ -33,8 +33,11 @@ pub struct Waveform {
     frames: Vec<Vec<i32>>
 }
 
-impl DspData for Waveform {
-    fn new(mut sndfile: SndFile) -> Waveform {
+#[derive(Default)]
+pub struct WaveformParameters;
+
+impl DspData<WaveformParameters> for Waveform {
+    fn new(mut sndfile: SndFile, _: WaveformParameters) -> Result<Waveform, DspErr> {
         // Compute block size
         let frames = sndfile.len().expect("Unable to retrieve number of frames");
         sndfile.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
@@ -84,7 +87,7 @@ impl DspData for Waveform {
 
         };
 
-        data
+        Ok(data)
     }
 }
 

@@ -1,3 +1,4 @@
+// #![feature(thread_is_running)]
 
 use sndfile::SndFile;
 // use std::fs::File;
@@ -18,6 +19,7 @@ use std::convert::TryInto;
 use std::thread::panicking;
 use std::cmp::max;
 extern crate sndfile;
+use crate::dsp::SpectrogramParameters;
 use crate::render::MetadataRenderer;
 use crate::render::ZoomHead;
 use crate::sndfile::SndFileIO;
@@ -82,6 +84,13 @@ struct CliArgs {
     // The file to read
     #[structopt(parse(from_os_str), help = "The path of the file to analyze")]
     path: std::path::PathBuf,
+
+    // FFT options
+    #[structopt(long = "fft-window-size", default_value="4096")]
+    fft_window_size: usize,
+    #[structopt(long = "fft-overlap", default_value="0.75")]
+    fft_overlap: f64,
+
 
     // Normalize option
     // unused for now
@@ -174,7 +183,12 @@ fn main() ->  Result<(), io::Error> {
 
     // Create the renderers
     let mut waveform = RendererType::Waveform(WaveformRenderer::new(&args.path));
-    let mut spectral = RendererType::Spectral(SpectralRenderer::new(&args.path));
+    let mut spectral = RendererType::Spectral(SpectralRenderer::new(
+        &args.path,
+        SpectrogramParameters {
+            window_size: args.fft_window_size,
+            overlap_rate: args.fft_overlap
+        }));
     let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));
 
 

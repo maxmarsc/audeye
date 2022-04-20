@@ -30,7 +30,7 @@ use tui::{
 // use viuer::{print_from_file, Config};
 
 use crate::utils::filled_rectangle::FilledRectangle;
-use crate::dsp::{Spectrogram, AsyncDspData};
+use crate::dsp::{Spectrogram, AsyncDspData, SpectrogramParameters};
 
 use std::num::{NonZeroU32, NonZeroUsize};
 
@@ -38,24 +38,29 @@ use fast_image_resize as fr;
 
 pub struct SpectralRenderer<'a> {
     channels : usize,
-    async_renderer: AsyncDspData<Spectrogram>,
+    async_renderer: AsyncDspData<Spectrogram, SpectrogramParameters>,
     resizer: fr::Resizer,
     canva_img: Option<Image<'a>>,
     max_width_resolution: usize
 }
 
 impl<'a> SpectralRenderer<'a> {
-    pub fn new(path: &std::path::PathBuf) -> Self {
+    pub fn new(path: &std::path::PathBuf, parameters: SpectrogramParameters) -> Self {
         let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
             .from_path(path).expect("Could not open wave file");
 
         let channels = snd.get_channels();
         // Nasty shit, should be done properly
-        let max_res = snd.len().unwrap() / (4096f64 * 0.25f64) as u64;
+        
+        // let parameters = SpectrogramParameters {
+        //     window_size: 4096,
+        //     overlap_rate: 0.75
+        // };
+        let max_res = snd.len().unwrap() / (parameters.window_size as f64 * (1f64 - parameters.overlap_rate)) as u64;
         
         SpectralRenderer {
             channels,
-            async_renderer: AsyncDspData::new(path),
+            async_renderer: AsyncDspData::new(path, parameters),
             resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
             // resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
             canva_img: None,

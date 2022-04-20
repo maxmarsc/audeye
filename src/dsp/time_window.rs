@@ -5,6 +5,8 @@ use std::{convert::TryFrom, io::SeekFrom, sync::mpsc::channel};
 use apodize::hanning_iter;
 use sndfile::SndFileIO;
 
+use super::DspErr;
+
 use rayon::prelude::*;
 
 pub struct Batcher {
@@ -20,7 +22,11 @@ pub struct Batcher {
 }
 
 impl Batcher {
-    pub fn new(mut sndfile: SndFile, window_size: usize, overlap: f64) -> Batcher {
+    pub fn new(mut sndfile: SndFile, window_size: usize, overlap: f64) -> Result<Batcher, DspErr> {
+        if 0f64 >= overlap || overlap >= 1f64 {
+            return Err(DspErr::new("Overlap values should be contained within ]0:1["))
+        }
+
         let frames = sndfile.len().unwrap();
         let channels = sndfile.get_channels();
         let tband_size = usize::try_from((window_size as f64 * (1. - overlap)) as i32).unwrap();
@@ -31,7 +37,7 @@ impl Batcher {
             usize::try_from(frames / tband_size as u64 + 1).unwrap()
         };
 
-        Batcher{
+        Ok(Batcher{
             sndfile,
             frames,
             tband_size,
@@ -41,7 +47,7 @@ impl Batcher {
             batch: vec![vec![0f64; window_size]; channels],
             window: hanning_iter(window_size).collect(),
             tmp_interleaved_block: vec![0f64; window_size * channels]
-        }
+        })
     }
 
     pub fn get_num_bands(&self) -> usize {

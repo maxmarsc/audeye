@@ -21,7 +21,7 @@ use tui::{
 
 use std::convert::TryFrom;
 
-use crate::dsp::{Waveform, AsyncDspData};
+use crate::dsp::{Waveform, AsyncDspData, WaveformParameters};
 
 fn draw_outlined_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
     let mut previous_idx = 0usize;
@@ -67,7 +67,7 @@ fn draw_filled_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
 
 pub struct WaveformRenderer {
     channels: usize,
-    async_renderer: AsyncDspData<Waveform>,
+    async_renderer: AsyncDspData<Waveform, WaveformParameters>,
     max_width_res: usize
 }
 
@@ -81,7 +81,7 @@ impl WaveformRenderer {
             
         WaveformRenderer {
             channels,
-            async_renderer: AsyncDspData::new(path),
+            async_renderer: AsyncDspData::new(path, WaveformParameters::default()),
             max_width_res: max_res
         }
     }
