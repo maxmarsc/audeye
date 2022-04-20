@@ -20,24 +20,15 @@ use std::cmp::max;
 extern crate sndfile;
 use crate::render::MetadataRenderer;
 use crate::render::ZoomHead;
-// use crate::render::renderer;
-// use crate::render::waveform;
 use crate::sndfile::SndFileIO;
 use std::io::{Error, ErrorKind};
 
 
-
-mod event;
-use crate::event::{Event, Events};
-mod r#mod;
-use crate::r#mod::{
-    TabsState
-};
-
 mod utils;
 use utils::Zoom;
 use utils::bindings;
-// use utils::TabsState;
+use utils::event::{Event, Events};
+use utils::TabsState;
 
 mod render;
 use render::Renderer;
