@@ -7,6 +7,7 @@ Milestone
  - [x] Metadata view
  - [ ] RMS and Peak in waveform view
  - [ ] Option : normalize
+ - [x] Option : FFT windows size and overlap
  - [ ] Option :  FFT dB threshold
  - [ ] Option : FFT window type
  - [ ] Option : FFT side smoothing
