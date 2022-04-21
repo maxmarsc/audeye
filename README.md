@@ -10,7 +10,7 @@ Milestone
  - [x] Option : normalize
  - [x] Option : FFT windows size and overlap
  - [x] Option :  FFT dB threshold
- - [ ] Option : FFT window type
+ - [x] Option : FFT window type
  - [ ] Option : FFT side smoothing
  - [ ] Option : FFT logarithmic scale
  - [ ] Option : Waveform envelope ?
