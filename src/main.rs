@@ -90,8 +90,8 @@ struct CliArgs {
     fft_window_size: usize,
     #[structopt(long = "fft-overlap", default_value="0.75")]
     fft_overlap: f64,
-    #[structopt(long = "fft-db-threashold", default_value="-130")]
-    fft_db_threashold: f64,
+    #[structopt(long = "fft-db-threshold", default_value="-130")]
+    fft_db_threshold: f64,
     #[structopt(long = "fft-window-type", parse(try_from_str = WindowType::parse), default_value=WindowType::default(), possible_values=WindowType::possible_values())]
     fft_window_type: WindowType,
 
@@ -191,7 +191,7 @@ fn main() ->  Result<(), io::Error> {
         SpectrogramParameters {
             window_size: args.fft_window_size,
             overlap_rate: args.fft_overlap,
-            db_threashold: args.fft_db_threashold,
+            db_threshold: args.fft_db_threshold,
             window_type: args.fft_window_type
         },
         args.normalize));

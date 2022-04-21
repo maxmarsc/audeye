@@ -18,14 +18,14 @@ use super::{DspData, DspErr};
 use crate::utils::Zoom;
 
 #[inline(always)]
-fn db_to_u8(db: f64, threashold: f64) -> u8 {
+fn db_to_u8(db: f64, threshold: f64) -> u8 {
     if db > 0f64 {
         panic!();
     }
-    if db < threashold {
+    if db < threshold {
         0u8
     } else {
-        ((db - threashold) * u8::MAX as f64 / - threashold) as u8
+        ((db - threshold) * u8::MAX as f64 / - threshold) as u8
     }
 }
 
@@ -43,7 +43,7 @@ pub struct Spectrogram {
 pub struct SpectrogramParameters {
     pub window_size: usize,
     pub overlap_rate: f64,
-    pub db_threashold: f64,
+    pub db_threshold: f64,
     pub window_type: WindowType
 }
 
@@ -55,7 +55,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
             Ok(batcher) => batcher,
             Err(err) => return Err(err)
         };
-        if parameters.db_threashold > 0f64 {
+        if parameters.db_threshold > 0f64 {
             return Err(DspErr::new("dB threshold should be a negative value"));
         }
         let num_bins = parameters.window_size / 2;
@@ -116,7 +116,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
                             .for_each(|(fidx, value) | {
                                 let bin_amp = (value * correction_factor * fnorm_inv / fft_len).norm_sqr();
                                 let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
-                                u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threashold);
+                                u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threshold);
                             });
                     },
                     None => {
@@ -125,7 +125,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
                             .for_each(|(fidx, value) | {
                                 let bin_amp = (value * correction_factor / fft_len).norm_sqr();
                                 let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
-                                u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threashold);
+                                u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threshold);
                             });
                     }
                 }
