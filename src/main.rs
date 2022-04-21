@@ -90,6 +90,8 @@ struct CliArgs {
     fft_window_size: usize,
     #[structopt(long = "fft-overlap", default_value="0.75")]
     fft_overlap: f64,
+    #[structopt(long = "fft-db-threashold", default_value="-130")]
+    fft_db_threashold: f64,
 
 
     // Normalize option
@@ -187,7 +189,8 @@ fn main() ->  Result<(), io::Error> {
         &args.path,
         SpectrogramParameters {
             window_size: args.fft_window_size,
-            overlap_rate: args.fft_overlap
+            overlap_rate: args.fft_overlap,
+            db_threashold: args.fft_db_threashold
         }));
     let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));
 

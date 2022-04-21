@@ -18,19 +18,16 @@ use super::{DspData, DspErr};
 use crate::utils::Zoom;
 
 const HANN_FACTOR: f64 = 2f64; // 2²
-const DB_MIN_THRESHOLD: f64 = -130f64; // -120dB
-const WINDOW_SIZE: usize = 4096;
-const OVERLAP_RATE: f64 = 0.75;
 
 #[inline(always)]
-fn db_to_u8(db: f64) -> u8 {
+fn db_to_u8(db: f64, threashold: f64) -> u8 {
     if db > 0f64 {
         panic!();
     }
-    if db < DB_MIN_THRESHOLD {
+    if db < threashold {
         0u8
     } else {
-        ((db - DB_MIN_THRESHOLD) * u8::MAX as f64 / - DB_MIN_THRESHOLD) as u8
+        ((db - threashold) * u8::MAX as f64 / - threashold) as u8
     }
 }
 
@@ -47,7 +44,8 @@ pub struct Spectrogram {
 
 pub struct SpectrogramParameters {
     pub window_size: usize,
-    pub overlap_rate: f64
+    pub overlap_rate: f64,
+    pub db_threashold: f64
 }
 
 impl DspData<SpectrogramParameters> for Spectrogram{
@@ -57,6 +55,9 @@ impl DspData<SpectrogramParameters> for Spectrogram{
             Ok(batcher) => batcher,
             Err(err) => return Err(err)
         };
+        if parameters.db_threashold > 0f64 {
+            return Err(DspErr::new("dB threshold should be a negative value"));
+        }
         let num_bins = parameters.window_size / 2;
         let num_bands = window_batcher.get_num_bands();
 
@@ -111,7 +112,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
                     .for_each(|(fidx, value) | {
                         let bin_amp = (value * HANN_FACTOR / fft_len).norm_sqr();
                         let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
-                        u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp);
+                        u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threashold);
                     });
             }
 
