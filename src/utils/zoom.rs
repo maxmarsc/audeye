@@ -10,10 +10,13 @@ pub struct Zoom {
 
 impl Zoom {
     pub fn new(max_zoom: f64) -> Result<Self, ZoomError> {
-        if max_zoom <= 0f64 || max_zoom > 1f64 {
+        let mut min = max_zoom;
+        if max_zoom <= 0f64 {
             return Err(ZoomError)
+        } else if min > 1f64 {
+            min = 1f64;
         }
-        Ok(Zoom { start: 0f64, length: 1f64, min:  max_zoom})
+        Ok(Zoom { start: 0f64, length: 1f64, min})
     }
 
     pub fn start(&self) -> f64{
@@ -25,16 +28,20 @@ impl Zoom {
     }
 
     pub fn update_zoom_max(&mut self, max: f64) {
-        self.min = max;
+        self.min = if max <= 1f64 {
+            max
+        } else {
+            1f64
+        };
 
         // Already above the limit, nothing to change
-        if self.length >= max {
+        if self.length >= self.min {
             return;
         }
 
         // Under the new limit, need to update the current state
         let mut center = self.start + self.length / 2f64;
-        self.length = max;
+        self.length = self.min;
 
         // Compute if the new center is appropriate or not anymore
         if center + (self.length / 2f64) > 1f64 {
