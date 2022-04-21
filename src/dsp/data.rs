@@ -6,6 +6,8 @@ use std::thread::{JoinHandle, self};
 extern crate sndfile;
 use crate::sndfile::SndFile;
 
+use super::normalization::compute_norm;
+
 pub struct DspErr {
     msg: String
 }
@@ -25,29 +27,41 @@ impl fmt::Display for DspErr {
 }
 
 pub trait DspData<P> {
-    fn new(file: SndFile, parameter: P) -> Result<Self, DspErr> where Self: Sized;
+    fn new(file: SndFile, parameter: P, normalize: Option<f64>) -> Result<Self, DspErr> where Self: Sized;
 }
 
 
+#[derive(Debug, Clone, Copy)]
+pub enum AsyncDspDataState {
+    Created,
+    Normalizing,
+    Processing,
+    Failed,
+    Finished
+}
+
 pub struct AsyncDspData<T : DspData<P> + Send + 'static, P : Send + 'static> {
-    rendered : bool,
+    state: AsyncDspDataState,
     pub data: Option<T>,
-    rendered_rx: Receiver<bool>,
+    rendered_rx: Receiver<AsyncDspDataState>,
     process_handle: Option<JoinHandle<T>>,
     phantom : PhantomData<P>
 }
 
 impl<T : DspData<P> + Send + 'static, P : Send + 'static> AsyncDspData<T, P> {
     pub fn update_status(&mut self) -> bool {
-        if !self.rendered {
+        let mut update_needed = false;
+
+        loop {
             match self.rendered_rx.try_recv() {
-                Ok(true) => {
+                Ok(AsyncDspDataState::Finished) => {
                     // Rendered properly
-                    self.rendered = true;
                     self.load_results();
-                    return true;
+                    self.state = AsyncDspDataState::Finished;
+                    update_needed = true;
+                    break;
                 },
-                Ok(false) => {
+                Ok(AsyncDspDataState::Failed) => {
                     // Failed to render, try to join to catch error
                     let opt_handle = self.process_handle.take();
                     match opt_handle {
@@ -59,15 +73,20 @@ impl<T : DspData<P> + Send + 'static, P : Send + 'static> AsyncDspData<T, P> {
                         },
                         None => panic!("Async rendering handle is None")
                     }
+                },
+                Ok(new_state) => {
+                    self.state = new_state;
+                    update_needed = true;
                 }
-                _ => { return false; }
+                _ => { break; }
             }
-        }
-        return false;
+        };
+
+        update_needed
     }
 
-    pub fn rendered(&mut self) -> bool {
-        self.rendered
+    pub fn state(&mut self) -> AsyncDspDataState {
+        self.state
     }
 
     pub fn data(&mut self) -> Option<&mut T> {
@@ -75,19 +94,17 @@ impl<T : DspData<P> + Send + 'static, P : Send + 'static> AsyncDspData<T, P> {
     }
 
     fn load_results(&mut self) {
-        if self.rendered {
-            let opt_handle = self.process_handle.take();
-            match opt_handle {
-                Some(handle) => {
-                    self.data = Some(handle.join().expect("Async rendering failed"));
-                },
-                None => panic!("Async rendering handle is None")
-            }
+        let opt_handle = self.process_handle.take();
+        match opt_handle {
+            Some(handle) => {
+                self.data = Some(handle.join().expect("Async rendering failed"));
+            },
+            None => panic!("Async rendering handle is None")
         }
     }
 
-    pub fn new(path: &std::path::PathBuf, parameters: P) -> Self {
-        let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+    pub fn new(path: &std::path::PathBuf, parameters: P, normalize: bool) -> Self {
+        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
             .from_path(path).expect("Could not open wave file");
         if !snd.is_seekable() {
             panic!("Input file is not seekable");
@@ -95,22 +112,35 @@ impl<T : DspData<P> + Send + 'static, P : Send + 'static> AsyncDspData<T, P> {
 
         let (rendered_tx, rendered_rx) = mpsc::channel();
         let join_handle = thread::spawn(move || {
-            let res = T::new(snd, parameters);
+            // First, compute the norm if needed
+            let norm = if normalize {
+                let _ = rendered_tx.send(AsyncDspDataState::Normalizing);
+                Some(compute_norm(&mut snd))
+            } else {
+                None
+            };
 
+            // Start the processing
+            let _ = rendered_tx.send(AsyncDspDataState::Processing);
+            let res = T::new(snd, parameters, norm);
+
+            // Check the processing result
             match res {
                 Ok(data) => {
-                    let _ = rendered_tx.send(true);
+                    // Success, we update the state and return the data
+                    let _ = rendered_tx.send(AsyncDspDataState::Finished);
                     return data;
                 },
                 Err(dsp_err) => {
-                    let _ = rendered_tx.send(false);
+                    // Failure, we stop the program and display the error
+                    let _ = rendered_tx.send(AsyncDspDataState::Failed);
                     panic!("{}", dsp_err);
                 }
             }
         });
 
         Self {
-            rendered: false,
+            state: AsyncDspDataState::Created,
             data: None,
             rendered_rx,
             process_handle: Some(join_handle),

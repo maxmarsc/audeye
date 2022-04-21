@@ -55,7 +55,7 @@ impl<T : ChannelRenderer> Renderer for T {
     }
 }
 
-pub fn draw_loading<B : Backend>(frame: &mut Frame<'_, B>, area : Rect, block: Block<'_>) {
+pub fn draw_text_info<B : Backend>(frame: &mut Frame<'_, B>, area : Rect, block: Block<'_>, text: &str) {
     let num_lines_to_center: usize = if area.height % 2 == 0 {
         usize::try_from(area.height).unwrap() / 2 - 1
     } else {
@@ -63,7 +63,7 @@ pub fn draw_loading<B : Backend>(frame: &mut Frame<'_, B>, area : Rect, block: B
     };
 
     let mut span_vec = vec![Spans::from(""); num_lines_to_center];
-    span_vec[num_lines_to_center - 1] = Spans::from("Loading...");
+    span_vec[num_lines_to_center - 1] = Spans::from(text);
 
     let paragraph = Paragraph::new(span_vec)
         .block(block)

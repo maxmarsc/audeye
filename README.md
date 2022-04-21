@@ -5,8 +5,9 @@ Milestone
  - [x] Channel naming (stereo, 2.1, 5.1, 7.1 ...)
  - [x] Zoom in/out
  - [x] Metadata view
+ - [ ] Optionnal labels on graphs
  - [ ] RMS and Peak in waveform view
- - [ ] Option : normalize
+ - [x] Option : normalize
  - [x] Option : FFT windows size and overlap
  - [x] Option :  FFT dB threshold
  - [ ] Option : FFT window type

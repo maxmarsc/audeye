@@ -49,7 +49,7 @@ pub struct SpectrogramParameters {
 }
 
 impl DspData<SpectrogramParameters> for Spectrogram{
-    fn new(sndfile: SndFile, parameters: SpectrogramParameters) -> Result<Spectrogram, DspErr> {
+    fn new(sndfile: SndFile, parameters: SpectrogramParameters, norm: Option<f64>) -> Result<Spectrogram, DspErr> {
         let channels = sndfile.get_channels();
         let mut window_batcher = match Batcher::new(sndfile, parameters.window_size, parameters.overlap_rate) {
             Ok(batcher) => batcher,
@@ -107,13 +107,27 @@ impl DspData<SpectrogramParameters> for Spectrogram{
                 let u8_spectrogram_slice = &mut spectrograms_u8[ch_idx][batch_idx*(num_bins)..(batch_idx + 1)*(num_bins)];
 
                 // Compute the magnitude and reduce it to u8
-                spectrum[1..num_bins + 1].iter()
-                    .enumerate()
-                    .for_each(|(fidx, value) | {
-                        let bin_amp = (value * HANN_FACTOR / fft_len).norm_sqr();
-                        let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
-                        u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threashold);
-                    });
+                match norm {
+                    Some(fnorm) => {
+                        let fnorm_inv = 1f64 / fnorm;
+                        spectrum[1..num_bins + 1].iter()
+                            .enumerate()
+                            .for_each(|(fidx, value) | {
+                                let bin_amp = (value * HANN_FACTOR * fnorm_inv / fft_len).norm_sqr();
+                                let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
+                                u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threashold);
+                            });
+                    },
+                    None => {
+                        spectrum[1..num_bins + 1].iter()
+                            .enumerate()
+                            .for_each(|(fidx, value) | {
+                                let bin_amp = (value * HANN_FACTOR / fft_len).norm_sqr();
+                                let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
+                                u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threashold);
+                            });
+                    }
+                }
             }
 
 

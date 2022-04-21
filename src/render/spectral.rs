@@ -1,7 +1,7 @@
 use super::Renderer;
 use super::greyscale_canva::TransposedGreyScaleCanva;
 // use crate::dsp::AsyncDspData;
-use super::{draw_loading, RenderingInfo, renderer::ChannelRenderer};
+use super::{draw_text_info, RenderingInfo, renderer::ChannelRenderer};
 use core::panic;
 extern crate sndfile;
 // use crate::dsp::AudioRepresentationData;
@@ -30,7 +30,7 @@ use tui::{
 // use viuer::{print_from_file, Config};
 
 use crate::utils::filled_rectangle::FilledRectangle;
-use crate::dsp::{Spectrogram, AsyncDspData, SpectrogramParameters};
+use crate::dsp::{Spectrogram, AsyncDspData, SpectrogramParameters, AsyncDspDataState};
 
 use std::num::{NonZeroU32, NonZeroUsize};
 
@@ -45,22 +45,16 @@ pub struct SpectralRenderer<'a> {
 }
 
 impl<'a> SpectralRenderer<'a> {
-    pub fn new(path: &std::path::PathBuf, parameters: SpectrogramParameters) -> Self {
+    pub fn new(path: &std::path::PathBuf, parameters: SpectrogramParameters, normalize: bool) -> Self {
         let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
             .from_path(path).expect("Could not open wave file");
 
-        let channels = snd.get_channels();
-        // Nasty shit, should be done properly
-        
-        // let parameters = SpectrogramParameters {
-        //     window_size: 4096,
-        //     overlap_rate: 0.75
-        // };
+        let channels = snd.get_channels();        
         let max_res = snd.len().unwrap() / (parameters.window_size as f64 * (1f64 - parameters.overlap_rate)) as u64;
         
         SpectralRenderer {
             channels,
-            async_renderer: AsyncDspData::new(path, parameters),
+            async_renderer: AsyncDspData::new(path, parameters, normalize),
             resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
             // resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
             canva_img: None,
@@ -71,10 +65,21 @@ impl<'a> SpectralRenderer<'a> {
 
 impl<'a> ChannelRenderer for SpectralRenderer<'a> {
     fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block, zoom: &Zoom) {
-        if ! self.async_renderer.rendered() {
-            // Not rendered yet
-            draw_loading(frame, area, block);
-            return;
+        match self.async_renderer.state() {
+            AsyncDspDataState::Normalizing => {
+                draw_text_info(frame, area, block, "Normalizing...");
+                return;
+            },
+            AsyncDspDataState::Created | AsyncDspDataState::Processing => {
+                draw_text_info(frame, area, block, "Loading...");
+                return;
+            },
+            AsyncDspDataState::Failed => {
+                // Should crash soon
+                draw_text_info(frame, area, block, "Error");
+                return;
+            },
+            _ => {}
         }
 
         if channel >= self.channels { panic!(); }

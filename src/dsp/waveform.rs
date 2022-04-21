@@ -11,8 +11,6 @@ use rayon::prelude::*;
 use super::{DspData, DspErr};
 use crate::utils::Zoom;
 
-const THRESHOLD: i32 = 0;
-
 #[inline(always)]
 fn get_min_max(frames: &[i32]) -> (i32, i32) {
     let mut min = 0i32;
@@ -37,7 +35,7 @@ pub struct Waveform {
 pub struct WaveformParameters;
 
 impl DspData<WaveformParameters> for Waveform {
-    fn new(mut sndfile: SndFile, _: WaveformParameters) -> Result<Waveform, DspErr> {
+    fn new(mut sndfile: SndFile, _: WaveformParameters, norm: Option<f64>) -> Result<Waveform, DspErr> {
         // Compute block size
         let frames = sndfile.len().expect("Unable to retrieve number of frames");
         sndfile.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
@@ -76,13 +74,35 @@ impl DspData<WaveformParameters> for Waveform {
                 // let mono_slices = data.frames.iter_mut().map(|channel| {
                 //     channel.as_mut_slice()[frame_idx..frame_idx + interleaved_slice.len()]
                 // }).collect();
-                interleaved_slice.chunks_exact(channels)
-                    .enumerate()
-                    .for_each(|(frame_idx, samples)| {
-                        for (channel, value) in samples.iter().enumerate() {
-                            data.frames[channel][frame_offset + frame_idx] = *value;
-                        }
-                    });
+
+                // We could use dynamic dispatch to automatically switch btw
+                // the different evaluation method (norm / no-norm) but it would
+                // surely slow it down.
+                // TODO: benchmark ?
+                match norm {
+                    Some(fnorm) => {
+                        let fnorm_inv = 1f64 / fnorm;
+
+                        interleaved_slice.chunks_exact(channels)
+                            .enumerate()
+                            .for_each(|(frame_idx, samples)| {
+                                for (channel, value) in samples.iter().enumerate() {
+                                    data.frames[channel][frame_offset + frame_idx] = (*value as f64 * fnorm_inv) as i32;
+                                }
+                            });
+                    },
+                    None => {
+                        interleaved_slice.chunks_exact(channels)
+                            .enumerate()
+                            .for_each(|(frame_idx, samples)| {
+                                for (channel, value) in samples.iter().enumerate() {
+                                    data.frames[channel][frame_offset + frame_idx] = *value;
+                                }
+                            });
+                    }
+                }
+
+                
             }
 
         };

@@ -25,7 +25,6 @@ use crate::render::ZoomHead;
 use crate::sndfile::SndFileIO;
 use std::io::{Error, ErrorKind};
 
-
 mod utils;
 use utils::Zoom;
 use utils::bindings;
@@ -184,14 +183,15 @@ fn main() ->  Result<(), io::Error> {
     }
 
     // Create the renderers
-    let mut waveform = RendererType::Waveform(WaveformRenderer::new(&args.path));
+    let mut waveform = RendererType::Waveform(WaveformRenderer::new(&args.path, args.normalize));
     let mut spectral = RendererType::Spectral(SpectralRenderer::new(
         &args.path,
         SpectrogramParameters {
             window_size: args.fft_window_size,
             overlap_rate: args.fft_overlap,
             db_threashold: args.fft_db_threashold
-        }));
+        },
+        args.normalize));
     let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));
 
 

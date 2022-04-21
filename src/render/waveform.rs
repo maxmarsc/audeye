@@ -1,6 +1,6 @@
 use super::Renderer;
 // use super::AsyncDspData;
-use super::{draw_loading, RenderingInfo, renderer::ChannelRenderer};
+use super::{draw_text_info, RenderingInfo, renderer::ChannelRenderer};
 use core::panic;
 extern crate sndfile;
 use crate::sndfile::SndFile;
@@ -21,7 +21,7 @@ use tui::{
 
 use std::convert::TryFrom;
 
-use crate::dsp::{Waveform, AsyncDspData, WaveformParameters};
+use crate::dsp::{Waveform, AsyncDspData, WaveformParameters, AsyncDspDataState};
 
 fn draw_outlined_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
     let mut previous_idx = 0usize;
@@ -72,7 +72,7 @@ pub struct WaveformRenderer {
 }
 
 impl WaveformRenderer {
-    pub fn new(path: &std::path::PathBuf) -> WaveformRenderer {
+    pub fn new(path: &std::path::PathBuf, normalize: bool) -> WaveformRenderer {
         let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
             .from_path(path).expect("Could not open wave file");
         
@@ -81,7 +81,7 @@ impl WaveformRenderer {
             
         WaveformRenderer {
             channels,
-            async_renderer: AsyncDspData::new(path, WaveformParameters::default()),
+            async_renderer: AsyncDspData::new(path, WaveformParameters::default(), normalize),
             max_width_res: max_res
         }
     }
@@ -89,10 +89,21 @@ impl WaveformRenderer {
 
 impl ChannelRenderer for WaveformRenderer {
     fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block, zoom: &Zoom) {
-        if ! self.async_renderer.rendered() {
-            // Not rendered yet
-            draw_loading(frame, area, block);
-            return;
+        match self.async_renderer.state() {
+            AsyncDspDataState::Normalizing => {
+                draw_text_info(frame, area, block, "Normalizing...");
+                return;
+            },
+            AsyncDspDataState::Created | AsyncDspDataState::Processing => {
+                draw_text_info(frame, area, block, "Loading...");
+                return;
+            },
+            AsyncDspDataState::Failed => {
+                // Should crash soon
+                draw_text_info(frame, area, block, "Error");
+                return;
+            },
+            _ => {}
         }
 
         if channel >= self.channels { panic!(); }

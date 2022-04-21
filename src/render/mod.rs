@@ -15,7 +15,7 @@ pub use renderer::{Renderer, RenderingInfo};
 pub use headers::{ChannelsTabs, ZoomHead};
 pub use help::HelperPopup;
 
-use renderer::{draw_loading};
+use renderer::{draw_text_info};
 
 pub enum RendererType<'a> {
     Waveform(WaveformRenderer),
