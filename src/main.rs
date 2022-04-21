@@ -45,6 +45,7 @@ use render::HelperPopup;
 // use crate::dsp::spectrogram::compute_spectrogram;
 
 mod dsp;
+use dsp::WindowType;
 
 // use crate::util::event::{Config, Event, Events};
 use std::{io, time::Duration};
@@ -91,7 +92,8 @@ struct CliArgs {
     fft_overlap: f64,
     #[structopt(long = "fft-db-threashold", default_value="-130")]
     fft_db_threashold: f64,
-
+    #[structopt(long = "fft-window-type", parse(try_from_str = WindowType::parse), default_value=WindowType::default(), possible_values=WindowType::possible_values())]
+    fft_window_type: WindowType,
 
     // Normalize option
     // unused for now
@@ -189,7 +191,8 @@ fn main() ->  Result<(), io::Error> {
         SpectrogramParameters {
             window_size: args.fft_window_size,
             overlap_rate: args.fft_overlap,
-            db_threashold: args.fft_db_threashold
+            db_threashold: args.fft_db_threashold,
+            window_type: args.fft_window_type
         },
         args.normalize));
     let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));

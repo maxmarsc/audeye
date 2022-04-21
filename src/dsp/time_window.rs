@@ -1,15 +1,79 @@
 extern crate sndfile;
 use crate::sndfile::SndFile;
 
-use std::{convert::TryFrom, io::SeekFrom, sync::mpsc::channel};
-use apodize::hanning_iter;
+use std::{convert::TryFrom, io::SeekFrom, sync::mpsc::channel, fmt::Display};
+use apodize::{hanning_iter, blackman_iter, hamming_iter};
 use sndfile::SndFileIO;
 
 use super::DspErr;
 
 use rayon::prelude::*;
 
-pub struct Batcher {
+#[derive(Debug, Clone, Copy)]
+pub enum WindowType {
+    Blackman,
+    Hanning,
+    Hamming,
+    Uniform
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct WindowTypeParseError;
+
+impl Display for WindowTypeParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Invalid window type")
+    }
+}
+
+const HANNING: &str = "hanning";
+const HAMMING: &str = "hamming";
+const BLACKMAN: &str = "blackman";
+const UNIFORM: &str = "uniform";
+
+impl WindowType {
+    fn build_window(&self, size: usize) -> Vec<f64> {
+        match self {
+            Self::Blackman => blackman_iter(size).collect(),
+            Self::Hamming => hamming_iter(size).collect(),
+            Self::Hanning => hanning_iter(size).collect(),
+            Self::Uniform => vec![1f64; size]
+        }
+    }
+
+    pub fn correction_factor(&self) -> f64 {
+        match self {
+            Self::Blackman => 2.80f64,
+            Self::Hamming => 1.85f64,
+            Self::Hanning => 2f64,
+            Self::Uniform => 1f64
+        }
+    }
+
+    pub fn parse(name: &str) -> Result<Self, WindowTypeParseError> {
+        if name == HANNING {
+            return Ok(Self::Hanning);
+        } else if name == HAMMING {
+            return Ok(Self::Hamming);
+        } else if name == BLACKMAN {
+            return Ok(Self::Blackman);
+        } else if name == UNIFORM {
+            return Ok(Self::Uniform);
+        } else {
+            return Err(WindowTypeParseError);
+        }
+    }
+
+    pub fn possible_values() -> &'static [&'static str] {
+        return &[HAMMING, HANNING, BLACKMAN, UNIFORM];
+    }
+
+    pub fn default() -> &'static str {
+        return HANNING;
+    }
+}
+
+pub struct TimeWindowBatcher {
     sndfile: SndFile,
     frames: u64,
     tband_size: usize,
@@ -21,8 +85,8 @@ pub struct Batcher {
     tmp_interleaved_block: Vec<f64>
 }
 
-impl Batcher {
-    pub fn new(mut sndfile: SndFile, window_size: usize, overlap: f64) -> Result<Batcher, DspErr> {
+impl TimeWindowBatcher {
+    pub fn new(mut sndfile: SndFile, window_size: usize, overlap: f64, window_type: WindowType) -> Result<TimeWindowBatcher, DspErr> {
         if 0f64 >= overlap || overlap >= 1f64 {
             return Err(DspErr::new("Overlap values should be contained within ]0:1["))
         }
@@ -37,7 +101,7 @@ impl Batcher {
             usize::try_from(frames / tband_size as u64 + 1).unwrap()
         };
 
-        Ok(Batcher{
+        Ok(TimeWindowBatcher{
             sndfile,
             frames,
             tband_size,
@@ -45,7 +109,7 @@ impl Batcher {
             crt_band_idx: 0,
             num_bands,
             batch: vec![vec![0f64; window_size]; channels],
-            window: hanning_iter(window_size).collect(),
+            window: window_type.build_window(window_size),
             tmp_interleaved_block: vec![0f64; window_size * channels]
         })
     }

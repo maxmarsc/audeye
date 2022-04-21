@@ -13,11 +13,9 @@ use rustfft::num_traits::Zero;
 use rayon::prelude::*;
 
 // use super::compute_spectrogram;
-use super::time_window::Batcher;
+use super::time_window::{TimeWindowBatcher, WindowType};
 use super::{DspData, DspErr};
 use crate::utils::Zoom;
-
-const HANN_FACTOR: f64 = 2f64; // 2²
 
 #[inline(always)]
 fn db_to_u8(db: f64, threashold: f64) -> u8 {
@@ -45,13 +43,15 @@ pub struct Spectrogram {
 pub struct SpectrogramParameters {
     pub window_size: usize,
     pub overlap_rate: f64,
-    pub db_threashold: f64
+    pub db_threashold: f64,
+    pub window_type: WindowType
 }
 
 impl DspData<SpectrogramParameters> for Spectrogram{
     fn new(sndfile: SndFile, parameters: SpectrogramParameters, norm: Option<f64>) -> Result<Spectrogram, DspErr> {
         let channels = sndfile.get_channels();
-        let mut window_batcher = match Batcher::new(sndfile, parameters.window_size, parameters.overlap_rate) {
+        let mut window_batcher = match TimeWindowBatcher::new(sndfile, parameters.window_size, 
+                parameters.overlap_rate, parameters.window_type) {
             Ok(batcher) => batcher,
             Err(err) => return Err(err)
         };
@@ -73,6 +73,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
         // Compute the Spectrogram
         let mut batch_idx = 0 as usize;
         let fft_len = parameters.window_size as f64 / 2f64;
+        let correction_factor = parameters.window_type.correction_factor();
 
 
         loop {
@@ -113,7 +114,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
                         spectrum[1..num_bins + 1].iter()
                             .enumerate()
                             .for_each(|(fidx, value) | {
-                                let bin_amp = (value * HANN_FACTOR * fnorm_inv / fft_len).norm_sqr();
+                                let bin_amp = (value * correction_factor * fnorm_inv / fft_len).norm_sqr();
                                 let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
                                 u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threashold);
                             });
@@ -122,7 +123,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
                         spectrum[1..num_bins + 1].iter()
                             .enumerate()
                             .for_each(|(fidx, value) | {
-                                let bin_amp = (value * HANN_FACTOR / fft_len).norm_sqr();
+                                let bin_amp = (value * correction_factor / fft_len).norm_sqr();
                                 let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
                                 u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threashold);
                             });
