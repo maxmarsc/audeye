@@ -19,6 +19,8 @@ use std::convert::TryInto;
 use std::thread::panicking;
 use std::cmp::max;
 extern crate sndfile;
+extern crate num_traits;
+
 use crate::dsp::SpectrogramParameters;
 use crate::render::MetadataRenderer;
 use crate::render::ZoomHead;
@@ -45,7 +47,7 @@ use render::HelperPopup;
 // use crate::dsp::spectrogram::compute_spectrogram;
 
 mod dsp;
-use dsp::WindowType;
+use dsp::{WindowType, SidePaddingType, PADDING_HELP_TEXT};
 
 // use crate::util::event::{Config, Event, Events};
 use std::{io, time::Duration};
@@ -92,8 +94,18 @@ struct CliArgs {
     fft_overlap: f64,
     #[structopt(long = "fft-db-threshold", default_value="-130")]
     fft_db_threshold: f64,
-    #[structopt(long = "fft-window-type", parse(try_from_str = WindowType::parse), default_value=WindowType::default(), possible_values=WindowType::possible_values())]
+    #[structopt(long = "fft-window-type", 
+        parse(try_from_str = WindowType::parse), 
+        default_value=WindowType::default(), 
+        possible_values=WindowType::possible_values(),)]
     fft_window_type: WindowType,
+    #[structopt(long = "fft-padding-type", 
+        parse(try_from_str = SidePaddingType::parse), 
+        default_value=SidePaddingType::default(), 
+        possible_values=SidePaddingType::possible_values(),
+        help=PADDING_HELP_TEXT)]
+    fft_padding_type: SidePaddingType,
+
 
     // Normalize option
     // unused for now
@@ -192,7 +204,8 @@ fn main() ->  Result<(), io::Error> {
             window_size: args.fft_window_size,
             overlap_rate: args.fft_overlap,
             db_threshold: args.fft_db_threshold,
-            window_type: args.fft_window_type
+            window_type: args.fft_window_type,
+            side_padding_type: args.fft_padding_type
         },
         args.normalize));
     let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));

@@ -11,7 +11,7 @@ Milestone
  - [x] Option : FFT windows size and overlap
  - [x] Option :  FFT dB threshold
  - [x] Option : FFT window type
- - [ ] Option : FFT side smoothing
+ - [x] Option : FFT side smoothing
  - [ ] Option : FFT logarithmic scale
  - [ ] Option : Waveform envelope ?
  - [ ] More audio format support (mp3, flac, ogg...)

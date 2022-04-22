@@ -6,12 +6,40 @@ pub use zoom::*;
 
 pub mod event;
 
+use sndfile::SndFile;
+
+use num_traits::{Num, NumAssign};
+
 // use core::slice::SlicePattern;
 use std::collections::BTreeSet;
 
 use rand::distributions::{Distribution, Uniform};
 use rand::rngs::ThreadRng;
 use tui::widgets::ListState;
+
+// #[repr(transparent)]
+// pub struct Sample<T : NumAssign>(T);
+
+// #[repr(C)]
+// pub struct Frame<T : NumAssign, const C: usize> {
+//     samples: [Sample<T>; C]
+// }
+
+// fn deinterleaved<T: NumAssign, const C: usize>(src: &[Frame<T, C>], dst )
+pub fn deinterleave_vec<T : NumAssign + Copy>(channels: usize, src: &[T], dst: &mut[Vec<T>]) {
+    let mut vec_slices: Vec<& mut[T]> = dst.iter_mut().map(|vec| vec.as_mut_slice()).collect();
+    deinterleave(channels, src, vec_slices.as_mut_slice());
+}
+
+pub fn deinterleave<T : NumAssign + Copy>(channels: usize, src: &[T], dst: &mut [&mut [T]]) {
+    src.chunks_exact(channels)
+        .enumerate()
+        .for_each(|(frame_idx, samples)| {
+            for (channel, value) in samples.iter().enumerate() {
+                dst[channel][frame_idx] = *value;
+            }
+        });
+}
 
 #[derive(Clone)]
 pub struct RandomSignal {

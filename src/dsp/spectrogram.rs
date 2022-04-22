@@ -13,7 +13,7 @@ use rustfft::num_traits::Zero;
 use rayon::prelude::*;
 
 // use super::compute_spectrogram;
-use super::time_window::{TimeWindowBatcher, WindowType};
+use super::time_window::{TimeWindowBatcher, WindowType, SidePaddingType};
 use super::{DspData, DspErr};
 use crate::utils::Zoom;
 
@@ -44,14 +44,18 @@ pub struct SpectrogramParameters {
     pub window_size: usize,
     pub overlap_rate: f64,
     pub db_threshold: f64,
-    pub window_type: WindowType
+    pub window_type: WindowType,
+    pub side_padding_type: SidePaddingType
 }
 
 impl DspData<SpectrogramParameters> for Spectrogram{
     fn new(sndfile: SndFile, parameters: SpectrogramParameters, norm: Option<f64>) -> Result<Spectrogram, DspErr> {
         let channels = sndfile.get_channels();
-        let mut window_batcher = match TimeWindowBatcher::new(sndfile, parameters.window_size, 
-                parameters.overlap_rate, parameters.window_type) {
+        let mut window_batcher = match TimeWindowBatcher::new(sndfile, 
+                parameters.window_size, 
+                parameters.overlap_rate, 
+                parameters.window_type,
+                parameters.side_padding_type) {
             Ok(batcher) => batcher,
             Err(err) => return Err(err)
         };

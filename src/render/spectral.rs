@@ -55,8 +55,8 @@ impl<'a> SpectralRenderer<'a> {
         SpectralRenderer {
             channels,
             async_renderer: AsyncDspData::new(path, parameters, normalize),
-            resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
-            // resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
+            // resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
+            resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
             canva_img: None,
             max_width_resolution: usize::try_from(max_res).unwrap()
         }

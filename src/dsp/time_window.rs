@@ -1,11 +1,14 @@
 extern crate sndfile;
 use crate::sndfile::SndFile;
 
-use std::{convert::TryFrom, io::SeekFrom, sync::mpsc::channel, fmt::Display};
+use std::{convert::TryFrom, io::SeekFrom, sync::mpsc::channel, fmt::Display, cmp::min};
 use apodize::{hanning_iter, blackman_iter, hamming_iter};
+use realfft::num_traits::ops::saturating;
 use sndfile::SndFileIO;
 
 use super::DspErr;
+
+use crate::utils::deinterleave_vec;
 
 use rayon::prelude::*;
 
@@ -73,6 +76,166 @@ impl WindowType {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum SidePaddingType {
+    Zeros,
+    SmoothRamp,
+    Loop
+}
+
+struct SidePadding {
+    padding_type: SidePaddingType,
+    padding_left: Vec<Vec<f64>>,
+    padding_right: Vec<Vec<f64>>,
+    window_size: usize,
+    left_side_offset: usize
+}
+
+impl SidePadding {
+    fn new(padding_type: SidePaddingType, sndfile: &mut SndFile, tband_size: usize, window_size: usize) -> Self {
+        let left_side_offset = (window_size - tband_size) / 2;
+        let channels = sndfile.get_channels();
+
+        let mut padding_left = vec![vec![0f64;left_side_offset]; channels];
+        let mut padding_right  = vec![vec![0f64;window_size]; channels];
+
+        match padding_type {
+            SidePaddingType::Loop => {
+                let frames = sndfile.len().unwrap();
+                let mut interleaved_data = vec![0f64; channels * window_size];
+
+                // Read the beginning of the file
+                sndfile.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
+                sndfile.read_to_slice(interleaved_data.as_mut_slice()).unwrap();
+                deinterleave_vec(channels, interleaved_data.as_slice(), padding_right.as_mut_slice());
+                
+                // Read the end of the file
+                let idx_offset = frames - left_side_offset as u64;
+                sndfile.seek(SeekFrom::Start(idx_offset)).unwrap();
+                sndfile.read_to_slice(interleaved_data.as_mut_slice()).unwrap();
+                deinterleave_vec(channels, &interleaved_data[..left_side_offset*channels], padding_left.as_mut_slice());
+            },
+            _ => ()
+        };
+
+        Self{
+            padding_type,
+            padding_left: padding_left,
+            padding_right: padding_right,
+            window_size,
+            left_side_offset
+        }
+    }
+
+    fn pad_left(&mut self, content: &mut [f64], next_sample: f64, channel: usize) {
+        let pad_slice = match self.padding_type {
+            SidePaddingType::SmoothRamp => {
+                let ramp_size = min(content.len(), self.left_side_offset / 64);
+                let mut crt_val = 0f64;
+                let step = next_sample / ramp_size as f64;
+
+                let start_idx = content.len() - ramp_size;
+
+                // Fill the start with zeros
+                self.padding_left[channel][..start_idx].iter_mut().for_each(|val| *val = 0f64);
+
+                // Fill the rest
+                self.padding_left[channel][start_idx..content.len()].iter_mut()
+                    .for_each(|pad_sample| {
+                        *pad_sample = crt_val;
+                        crt_val += step;
+                });
+
+                &self.padding_left[channel][..content.len()]
+            },
+            _ => {
+                let start = self.left_side_offset - content.len();
+                &self.padding_left[channel][start..]
+            }
+        };
+
+        pad_slice.iter().zip(content.iter_mut())
+            .for_each(|(pad_sample, content_sample)| {
+                *content_sample = *pad_sample; 
+        });
+    }
+
+    fn pad_right(&mut self, content: &mut [f64], prev_sample: f64, channel: usize) {
+        let pad_slice = match self.padding_type {
+            SidePaddingType::SmoothRamp => {
+                let ramp_size = min(content.len(), self.left_side_offset / 64);
+                let mut crt_val = 0f64;
+                let step = prev_sample / ramp_size as f64;
+
+                // Fill the start with the ramp
+                self.padding_right[channel][..ramp_size].iter_mut()
+                    .for_each(|pad_sample| {
+                        *pad_sample = crt_val;
+                        crt_val += step;
+                });
+
+                // Fill the rest with zeros
+                self.padding_right[channel][ramp_size..].iter_mut().for_each(|val| *val = 0f64);
+
+                &self.padding_right[channel][..content.len()]
+            },
+            _ => {
+                // let start = self.left_side_offset - content.len();
+                &self.padding_right[channel][..content.len()]
+            }
+        };
+
+        pad_slice.iter().zip(content.iter_mut())
+            .for_each(|(pad_sample, content_sample)| {
+                *content_sample = *pad_sample; 
+        });
+    }
+
+    fn left_side_offset(&self) -> usize {
+        self.left_side_offset
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SidePaddingTypeParseError;
+
+impl Display for SidePaddingTypeParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Invalid side padding type")
+    }
+}
+
+const ZEROS: &str = "zeros";
+const RAMP: &str = "ramp";
+const LOOP: &str = "loop";
+pub const PADDING_HELP_TEXT: &str = 
+    "How to fill the missing samples for the firsts and lasts sample windows
+    \tzeros : fill with zeros samples
+    \tramp : small linear ramp to match the last/next sample
+    \tloop : loop the end to the beginning and vice-versa\n";
+
+impl SidePaddingType {
+    pub fn parse(name: &str) -> Result<Self, SidePaddingTypeParseError> {
+        if name == ZEROS {
+            return Ok(Self::Zeros);
+        } else if name == RAMP {
+            return Ok(Self::SmoothRamp);
+        } else if name == LOOP {
+            return Ok(Self::Loop);
+        } else {
+            return Err(SidePaddingTypeParseError);
+        }
+    }
+
+    pub fn possible_values() -> &'static [&'static str] {
+        return &[ZEROS, RAMP, LOOP];
+    }
+
+    pub fn default() -> &'static str {
+        return ZEROS;
+    }
+}
+
 pub struct TimeWindowBatcher {
     sndfile: SndFile,
     frames: u64,
@@ -82,11 +245,12 @@ pub struct TimeWindowBatcher {
     num_bands: usize,
     batch: Vec<Vec<f64>>,
     window: Vec<f64>,
-    tmp_interleaved_block: Vec<f64>
+    tmp_interleaved_block: Vec<f64>,
+    side_padding: SidePadding
 }
 
 impl TimeWindowBatcher {
-    pub fn new(mut sndfile: SndFile, window_size: usize, overlap: f64, window_type: WindowType) -> Result<TimeWindowBatcher, DspErr> {
+    pub fn new(mut sndfile: SndFile, window_size: usize, overlap: f64, window_type: WindowType, side_padding: SidePaddingType) -> Result<TimeWindowBatcher, DspErr> {
         if 0f64 >= overlap || overlap >= 1f64 {
             return Err(DspErr::new("Overlap values should be contained within ]0:1["))
         }
@@ -101,6 +265,8 @@ impl TimeWindowBatcher {
             usize::try_from(frames / tband_size as u64 + 1).unwrap()
         };
 
+        let side_padding = SidePadding::new(side_padding, &mut sndfile, tband_size, window_size);
+
         Ok(TimeWindowBatcher{
             sndfile,
             frames,
@@ -110,7 +276,8 @@ impl TimeWindowBatcher {
             num_bands,
             batch: vec![vec![0f64; window_size]; channels],
             window: window_type.build_window(window_size),
-            tmp_interleaved_block: vec![0f64; window_size * channels]
+            tmp_interleaved_block: vec![0f64; window_size * channels],
+            side_padding
         })
     }
 
@@ -160,9 +327,14 @@ impl TimeWindowBatcher {
         }
         
         // Write the padding zeros - TODO: vectorize ?
-        for ch_vec in &mut self.batch {
-            ch_vec[..left_padding_idx].iter_mut().for_each(|v| *v = 0f64);
-            ch_vec[right_padding_idx..].iter_mut().for_each(|v| *v = 0f64);
+        for (channel, ch_vec) in self.batch.iter_mut().enumerate() {
+            // Left padding
+            let next_sample = ch_vec[left_padding_idx];
+            self.side_padding.pad_left(&mut ch_vec[..left_padding_idx], next_sample, channel);
+
+            // Right padding
+            let prev_sample = ch_vec[right_padding_idx - 1];
+            self.side_padding.pad_right(&mut ch_vec[right_padding_idx..], prev_sample, channel);
         }
 
         {
