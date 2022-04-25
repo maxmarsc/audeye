@@ -20,6 +20,7 @@ use std::thread::panicking;
 use std::cmp::max;
 extern crate sndfile;
 extern crate num_traits;
+extern crate num_integer;
 
 use crate::dsp::SpectrogramParameters;
 use crate::render::MetadataRenderer;

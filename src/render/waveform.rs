@@ -10,7 +10,7 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use tui::backend::{Backend};
 use tui::layout::Rect;
 use tui::symbols::Marker;
-use tui::widgets::canvas::{Canvas, Line, Context};
+use tui::widgets::canvas::{Canvas, Line, Context, Points};
 use tui::{
     widgets::{Chart, Dataset, GraphType, Block, Borders, Axis},
     symbols,
@@ -21,7 +21,7 @@ use tui::{
 
 use std::convert::TryFrom;
 
-use crate::dsp::{Waveform, AsyncDspData, WaveformParameters, AsyncDspDataState};
+use crate::dsp::{Waveform, AsyncDspData, WaveformParameters, AsyncDspDataState, WaveformPoint};
 
 fn draw_outlined_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
     let mut previous_idx = 0usize;
@@ -64,6 +64,43 @@ fn draw_filled_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
     }
 }
 
+fn draw_shape(ctx: &mut Context, points: &Vec<WaveformPoint<i32>>) {
+    let mut prev_peak_up = 0f64;
+    let mut prev_peak_down = 0f64;
+
+    for (idx, points) in points.iter().enumerate() {
+        // Draw inner RMS shape
+        ctx.draw(&Line{
+            x1: idx as f64,
+            x2: idx as f64,
+            y1: -(points.rms as f64),
+            y2: points.rms as f64,
+            color: Color::White
+        });
+
+        if idx != 0usize {
+            // Draw top and low peaks
+            ctx.draw(&Line{
+                x1: idx as f64 - 1f64,
+                x2: idx as f64,
+                y1: prev_peak_up,
+                y2: points.peak_max as f64,
+                color: Color::White
+            });
+
+            ctx.draw(&Line{
+                x1: idx as f64 - 1f64,
+                x2: idx as f64,
+                y1: prev_peak_down,
+                y2: points.peak_min as f64,
+                color: Color::White
+            });
+        }
+
+        prev_peak_down = points.peak_min as f64;
+        prev_peak_up = points.peak_max as f64;
+    }
+}
 
 pub struct WaveformRenderer {
     channels: usize,
@@ -114,15 +151,12 @@ impl ChannelRenderer for WaveformRenderer {
         let estimated_witdh_res = canva_width_int * 2;      // Braille res is 2 per char
 
         // Compute local min & max for each block
-        let (n_int, p_int) = data_ref.compute_min_max(channel, estimated_witdh_res, zoom);
-
-        // Pick drawing method
-        let drawing_method = draw_filled_shape;
+        let points = data_ref.compute_points(channel, estimated_witdh_res, zoom);
     
         // Draw the canva
         let canva = Canvas::default()
             .block(block)
-            .paint(|ctx| { drawing_method(ctx, &n_int, &p_int); })
+            .paint(|ctx| { draw_shape(ctx, &points) })
             .marker(Marker::Braille)
             .x_bounds([-1., estimated_witdh_res as f64 + 1f64])
             .y_bounds([i32::MIN as f64, i32::MAX as f64]);

@@ -5,18 +5,21 @@ use crate::sndfile::SndFile;
 use std::io::SeekFrom;
 
 use std::convert::{TryFrom, TryInto};
+// use num_integer::roots::Roots::sqrt;
+use num_integer::Roots;
 
 use rayon::prelude::*;
 
 use super::{DspData, DspErr};
 use crate::utils::Zoom;
 
-#[inline(always)]
-fn get_min_max(frames: &[i32]) -> (i32, i32) {
+fn compute_point(frames: &[i32]) -> WaveformPoint<i32> {
     let mut min = 0i32;
     let mut max = 0i32;
+    let mut sum = 0f64;
 
     for elm in frames {
+        sum += (*elm as f64) * (*elm as f64);
         if *elm > max {
             max = *elm;
         } else if *elm < min {
@@ -24,11 +27,18 @@ fn get_min_max(frames: &[i32]) -> (i32, i32) {
         }
     };
 
-    (min, max)
+    WaveformPoint { rms: (sum / frames.len() as f64).sqrt() as i32, peak_min: min, peak_max: max }
 }
 
 pub struct Waveform {
     frames: Vec<Vec<i32>>
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub struct WaveformPoint<T> {
+    pub rms: T,
+    pub peak_min: T,
+    pub peak_max: T
 }
 
 #[derive(Default)]
@@ -112,10 +122,9 @@ impl DspData<WaveformParameters> for Waveform {
 }
 
 impl Waveform {
-    pub fn compute_min_max(&self, channel: usize, block_count: usize, zoom: &Zoom) -> (Vec<i32>, Vec<i32>) {
+    pub fn compute_points(&self, channel: usize, block_count: usize, zoom: &Zoom) -> Vec<WaveformPoint<i32>> {
         // Alloc vectors
-        let mut p = vec![0i32; block_count];
-        let mut n = vec![0i32; block_count];
+        let mut points = vec![WaveformPoint::default(); block_count];
 
         // Compute block size and count
         let total_frames = self.frames[0].len();
@@ -131,19 +140,18 @@ impl Waveform {
         let samples_chunks = self.frames[channel][start..end].par_chunks_exact(block_size);
         let remains = samples_chunks.remainder();
 
-        n[..block_count].par_iter_mut()
-            .zip(p[..block_count].par_iter_mut())
+        points[..block_count].par_iter_mut()
             .zip(samples_chunks.into_par_iter())
-            .for_each(|((n, p), chunk)| {
-                (*n, *p) = get_min_max(chunk);
+            .for_each(|(point, chunk)| {
+                *point = compute_point(chunk);
             });
-        
+    
 
         if remains.len() > 0 {
             // Consume the end
-            (n[block_count - 1], p[block_count - 1]) = get_min_max(remains);
+            points[block_count - 1] = compute_point(remains);
         }
 
-        (n, p)
+        points
     }
 }
