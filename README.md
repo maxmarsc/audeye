@@ -6,7 +6,7 @@ Milestone
  - [x] Zoom in/out
  - [x] Metadata view
  - [ ] Optionnal labels on graphs
- - [x ] RMS and Peak in waveform view
+ - [x] RMS and Peak in waveform view
  - [x] Option : normalize
  - [x] Option : FFT windows size and overlap
  - [x] Option :  FFT dB threshold
