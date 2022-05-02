@@ -10,6 +10,7 @@ Audeye is a terminal tool to visualize audio content, written in Rust
 
 ## Features
  - wav / aif / flac / ogg-vorbis and many more (see : [libsndfile format compatibility v1.0.31](https://libsndfile.github.io/libsndfile/formats.html))
+ - mono / stereo / 5.1 / 7.1 ... (up to 9 channels)
  - Waveform peak & RMS visualizer
  - Spectrogram visualizer
  - Signal normalization
@@ -21,8 +22,11 @@ Audeye is a terminal tool to visualize audio content, written in Rust
  - `left arrow` / `right arrow` : navigate through panels
  - `j` / `k` : zoom out / in
  - `h` / `l` : move left / right
+ - [`0`-`9`] : activate / deactivate display of the corresponding channel
+ - `Esc` : reset channel layout
 
 ## CLI arguments
+ - `-n` : normalize the audio signal before displaying it (not channel aware)
  - `--fft-window-size`
  - `--fft-window-type` : `hanning` / `hamming` / `blackman` / `uniform`
  - `--fft-overlap`
