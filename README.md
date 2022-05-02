@@ -11,7 +11,7 @@ Milestone
  - [x] Option :  FFT dB threshold
  - [x] Option : FFT window type
  - [x] Option : FFT side smoothing
- - [ ] Tests
+ - [x] Unit tests
  - [ ] Optionnal labels on graphs
  - [ ] Option : FFT logarithmic scale
  - [ ] Option : Waveform envelope ?
