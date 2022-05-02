@@ -1,25 +1,10 @@
-// #![feature(thread_is_running)]
-
-use crossterm::tty::IsTty;
-use sndfile::SndFile;
 use sndfile::SndFileError;
-// use std::fs::File;
 use structopt::StructOpt;
-use hound;
-use terminal_size::terminal_size;
 use tui::Frame;
 use tui::backend::Backend;
-use tui::layout;
 use tui::style::Modifier;
 use tui::widgets::Clear;
-use tui::widgets::Dataset;
-use tui::widgets::GraphType;
 use std::convert::From;
-use std::convert::TryFrom;
-use std::convert::TryInto;
-// use std::ptr::metadata;
-use std::thread::panicking;
-use std::cmp::max;
 extern crate sndfile;
 extern crate num_traits;
 extern crate num_integer;
@@ -27,10 +12,7 @@ extern crate crossterm;
 
 use crate::dsp::SpectrogramParameters;
 use crate::render::MetadataRenderer;
-use crate::render::ZoomHead;
-use crate::sndfile::SndFileIO;
 use std::io::{Error, ErrorKind};
-use crossterm::tty;
 
 mod utils;
 use utils::Zoom;
@@ -46,33 +28,23 @@ use render::RendererType;
 use render::ChannelsTabs;
 use render::RenderingInfo;
 use render::HelperPopup;
-// use crate::util::
-
-// mod dsp;
-// use crate::dsp::spectrogram::compute_spectrogram;
 
 mod dsp;
 use dsp::{WindowType, SidePaddingType, PADDING_HELP_TEXT};
 
-// use crate::util::event::{Config, Event, Events};
 use std::{io, time::Duration};
-// use crossterm::event::KeyEvent;
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::CrosstermBackend,
-    // backend::Te
     layout::{Constraint, Direction, Layout, Rect},
     style::Color,
-    // style::Color::{Yellow, Green},
     style::Style,
     widgets::{
-        canvas::{Canvas, Map, MapResolution, Rectangle},
-        Block, Borders, Chart, Axis, Tabs
+        canvas::{Canvas, Rectangle},
+        Block, Borders, Tabs
     },
     text::{Span, Spans},
     Terminal,
-    symbols,
-    
 };
 
 const WAVEFORM_TAB_IDX: usize = 0;
@@ -113,9 +85,7 @@ struct CliArgs {
         help=PADDING_HELP_TEXT)]
     fft_padding_type: SidePaddingType,
 
-
     // Normalize option
-    // unused for now
     #[structopt(short = "n", long = "normalize")]
     normalize: bool,
 }
@@ -172,7 +142,6 @@ fn helper_layout(area: Rect) -> Rect {
         width: area.width / 2,
         height: area.height / 2
     }
-    // Rect { x: (), y: (), width: (), height: () }
 }
 
 fn main() ->  Result<(), io::Error> {
