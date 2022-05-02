@@ -2,6 +2,7 @@
 
 use crossterm::tty::IsTty;
 use sndfile::SndFile;
+use sndfile::SndFileError;
 // use std::fs::File;
 use structopt::StructOpt;
 use hound;
@@ -175,41 +176,37 @@ fn helper_layout(area: Rect) -> Rect {
 }
 
 fn main() ->  Result<(), io::Error> {
-    // Get some infos about the terminal
-    // let (width, height) = terminal_size().expect("Unable to get terminal size");
-
     // Get cli args
     let args = CliArgs::from_args();
 
-    // Setup UI
-    // termion::is_tty(stream);
-    // let stdout = if termion::is_tty(&io::stdout()) {
-    //     io::stdout().into_raw_mode()?
-    // } else {
-    //     io::stdout()
-    // };
-    // crossterm::tty::IsTty();
-
     let stdout = io::stdout().into_raw_mode()?;
-    // let stdout = io::stdout();
-    // if stdout.is_tty() {
-
-    
-    // get_tt
-    
-    // let stdout = tty::IsTty()
     let stdout = MouseTerminal::from(stdout);
     let stdout = AlternateScreen::from(stdout);
     let backend = CrosstermBackend::new(stdout);
-    // let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     const TAB_SIZE: u16 = 3;
 
     let events = Events::new();
 
-    // Check file info
-    let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(&args.path).expect("Could not open wave file");
+    // Check file
+    let snd_res = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+        .from_path(&args.path);
+    match snd_res {
+        Err(err) => {
+            return Err(match err {
+                SndFileError::UnrecognisedFormat(msg) => Error::new(ErrorKind::InvalidData, msg),
+                SndFileError::SystemError(msg) => Error::new(ErrorKind::InvalidData, msg),
+                SndFileError::MalformedFile(msg) => Error::new(ErrorKind::InvalidData, msg),
+                SndFileError::UnsupportedEncoding(msg) => Error::new(ErrorKind::InvalidData, msg),
+                SndFileError::InvalidParameter(msg) => Error::new(ErrorKind::InvalidData, msg),
+                SndFileError::InternalError(msg) => Error::new(ErrorKind::InvalidData, msg),
+                SndFileError::IOError(io_err) => io_err,
+            })
+        }
+        _ => ()
+    }
+    
+    let snd = snd_res.unwrap();
     let channels = snd.get_channels();
     if channels > 9usize {
         let err = Error::new(ErrorKind::InvalidInput, 
