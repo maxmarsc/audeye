@@ -1,5 +1,6 @@
 // #![feature(thread_is_running)]
 
+use crossterm::tty::IsTty;
 use sndfile::SndFile;
 // use std::fs::File;
 use structopt::StructOpt;
@@ -21,12 +22,14 @@ use std::cmp::max;
 extern crate sndfile;
 extern crate num_traits;
 extern crate num_integer;
+extern crate crossterm;
 
 use crate::dsp::SpectrogramParameters;
 use crate::render::MetadataRenderer;
 use crate::render::ZoomHead;
 use crate::sndfile::SndFileIO;
 use std::io::{Error, ErrorKind};
+use crossterm::tty;
 
 mod utils;
 use utils::Zoom;
@@ -52,9 +55,11 @@ use dsp::{WindowType, SidePaddingType, PADDING_HELP_TEXT};
 
 // use crate::util::event::{Config, Event, Events};
 use std::{io, time::Duration};
+// use crossterm::event::KeyEvent;
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::CrosstermBackend,
+    // backend::Te
     layout::{Constraint, Direction, Layout, Rect},
     style::Color,
     // style::Color::{Yellow, Green},
@@ -177,7 +182,22 @@ fn main() ->  Result<(), io::Error> {
     let args = CliArgs::from_args();
 
     // Setup UI
+    // termion::is_tty(stream);
+    // let stdout = if termion::is_tty(&io::stdout()) {
+    //     io::stdout().into_raw_mode()?
+    // } else {
+    //     io::stdout()
+    // };
+    // crossterm::tty::IsTty();
+
     let stdout = io::stdout().into_raw_mode()?;
+    // let stdout = io::stdout();
+    // if stdout.is_tty() {
+
+    
+    // get_tt
+    
+    // let stdout = tty::IsTty()
     let stdout = MouseTerminal::from(stdout);
     let stdout = AlternateScreen::from(stdout);
     let backend = CrosstermBackend::new(stdout);

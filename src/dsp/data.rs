@@ -8,6 +8,7 @@ use crate::sndfile::SndFile;
 
 use super::normalization::compute_norm;
 
+#[derive(Debug)]
 pub struct DspErr {
     msg: String
 }
@@ -31,7 +32,7 @@ pub trait DspData<P> {
 }
 
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AsyncDspDataState {
     Created,
     Normalizing,

@@ -155,3 +155,110 @@ impl Waveform {
         points
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::dsp::{Waveform, WaveformParameters, DspData, AsyncDspData, AsyncDspDataState};
+    use sndfile;
+    use std::path::{Path, PathBuf};
+    use crate::Zoom;
+    use std::time::Duration;
+    use std::thread::sleep;
+
+
+    fn get_test_files_location() -> PathBuf {
+        return Path::new(&env!("CARGO_MANIFEST_DIR").to_string())
+            .join("tests")
+            .join("files");
+    }
+
+    #[test]
+    fn build() {
+        for norm in [None, Some(1.1f64)] {
+            let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
+
+            Waveform::new(snd, WaveformParameters::default(), norm).unwrap();
+        }
+    }
+
+    #[test]
+    fn async_build() {
+        let sleep_interval = Duration::new(1, 0);
+        let path = get_test_files_location().join("rock_1s.wav");
+
+        let mut async_data: AsyncDspData<Waveform, WaveformParameters> = AsyncDspData::new(&path, WaveformParameters::default(), false);
+        let mut attempts = 0;
+
+        loop {
+            sleep(sleep_interval);
+            async_data.update_status();
+            let state = async_data.state();
+
+            assert_ne!(state, AsyncDspDataState::Failed);
+            assert!(attempts < 30);
+
+            if state == AsyncDspDataState::Finished {
+                break;
+            }
+            attempts += 1;
+        }
+    }
+
+    #[test]
+    fn async_build_normalize() {
+        let sleep_interval = Duration::new(1, 0);
+        let path = get_test_files_location().join("rock_1s.wav");
+
+        let mut async_data: AsyncDspData<Waveform, WaveformParameters> = AsyncDspData::new(&path, WaveformParameters::default(), true);
+        let mut attempts = 0;
+
+        loop {
+            sleep(sleep_interval);
+            async_data.update_status();
+            let state = async_data.state();
+
+            assert_ne!(state, AsyncDspDataState::Failed);
+            assert!(attempts < 30);
+
+            if state == AsyncDspDataState::Finished {
+                break;
+            }
+            attempts += 1;
+        }
+    }
+
+    #[test]
+    fn compute_points() {
+        let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
+        let channels = snd.get_channels();
+        let mut zoom = Zoom::new(0.5f64).unwrap();
+        let blocks_counts = [50usize, 100, 128, 150, 1024];
+
+        let mut waveform = Waveform::new(snd, WaveformParameters::default(), None).unwrap();
+
+        // No zoom
+        for ch_idx in 0..channels {
+            for block_count in blocks_counts {
+                let points = waveform.compute_points(ch_idx, block_count, &zoom);
+
+                assert_eq!(block_count, points.len());
+            }
+        }
+
+        // Zoom in and move
+        for _ in 0..10 {
+            zoom.zoom_in();
+            zoom.move_right();
+
+            for ch_idx in 0..channels {
+                for block_count in blocks_counts {
+                    let points = waveform.compute_points(ch_idx, block_count, &zoom);
+    
+                    assert_eq!(block_count, points.len());
+                }
+            }
+        }
+    }
+}
