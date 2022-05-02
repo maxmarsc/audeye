@@ -1,68 +1,60 @@
-use super::Renderer;
-// use super::AsyncDspData;
-use super::{draw_text_info, RenderingInfo, renderer::ChannelRenderer};
+use super::{draw_text_info, renderer::ChannelRenderer};
 use core::panic;
 extern crate sndfile;
-use crate::sndfile::SndFile;
 use crate::utils::Zoom;
-use std::thread::{self, JoinHandle};
-use std::sync::mpsc::{self, Receiver, Sender};
 use tui::backend::{Backend};
 use tui::layout::Rect;
 use tui::symbols::Marker;
-use tui::widgets::canvas::{Canvas, Line, Context, Points};
+use tui::widgets::canvas::{Canvas, Line, Context};
 use tui::{
-    widgets::{Chart, Dataset, GraphType, Block, Borders, Axis},
-    symbols,
-    style::{Style, Color, Modifier},
-    text::Span,
+    widgets::{Block},
+    style::{Color},
     Frame
 };
-
 use std::convert::TryFrom;
 
 use crate::dsp::{Waveform, AsyncDspData, WaveformParameters, AsyncDspDataState, WaveformPoint};
 
-fn draw_outlined_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
-    let mut previous_idx = 0usize;
-    let (mut prev_n, mut prev_p) = (0f64, 0f64);
-    for (idx, (n,p)) in n_int.iter().zip(p_int.iter()).enumerate() {
-        if idx != 0 {
-            // draw positive line
-            ctx.draw(&Line{
-                x1: previous_idx as f64,
-                y1: prev_p,
-                x2: idx as f64,
-                y2: *p as f64,
-                color: Color::White
-            });
+// fn draw_outlined_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
+//     let mut previous_idx = 0usize;
+//     let (mut prev_n, mut prev_p) = (0f64, 0f64);
+//     for (idx, (n,p)) in n_int.iter().zip(p_int.iter()).enumerate() {
+//         if idx != 0 {
+//             // draw positive line
+//             ctx.draw(&Line{
+//                 x1: previous_idx as f64,
+//                 y1: prev_p,
+//                 x2: idx as f64,
+//                 y2: *p as f64,
+//                 color: Color::White
+//             });
 
-            // draw negative line
-            ctx.draw(&Line{
-                x1: previous_idx as f64,
-                y1: prev_n,
-                x2: idx as f64,
-                y2: *n as f64,
-                color: Color::White
-            });
-        }
-        previous_idx = idx;
-        prev_n = *n as f64;
-        prev_p = *p as f64;
-    }
-}
+//             // draw negative line
+//             ctx.draw(&Line{
+//                 x1: previous_idx as f64,
+//                 y1: prev_n,
+//                 x2: idx as f64,
+//                 y2: *n as f64,
+//                 color: Color::White
+//             });
+//         }
+//         previous_idx = idx;
+//         prev_n = *n as f64;
+//         prev_p = *p as f64;
+//     }
+// }
 
-fn draw_filled_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
-    for (idx, (n,p)) in n_int.iter().zip(p_int.iter()).enumerate() {
-        ctx.draw(&Line{
-            x1: idx as f64,
-            x2: idx as f64,
-            y1: *n as f64,
-            y2: *p as f64,
-            color: Color::White
-        });
-    }
-}
+// fn draw_filled_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
+//     for (idx, (n,p)) in n_int.iter().zip(p_int.iter()).enumerate() {
+//         ctx.draw(&Line{
+//             x1: idx as f64,
+//             x2: idx as f64,
+//             y1: *n as f64,
+//             y2: *p as f64,
+//             color: Color::White
+//         });
+//     }
+// }
 
 fn draw_shape(ctx: &mut Context, points: &Vec<WaveformPoint<i32>>) {
     let mut prev_peak_up = 0f64;

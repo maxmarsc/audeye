@@ -1,16 +1,9 @@
-use std::sync::mpsc::{Receiver, self};
-use std::thread::{JoinHandle, self};
-
-use image::imageops::vertical_gradient;
 use tui::backend::Backend;
 use tui::widgets::{Block, Paragraph, Borders};
 use tui::Frame;
-use tui::text::{Span, Spans};
+use tui::text::{Spans};
 use tui::layout::{Rect, Alignment, Constraint, Layout, Direction};
-
 use std::convert::TryFrom;
-
-use super::ChannelsTabs;
 
 use crate::utils::Zoom;
 

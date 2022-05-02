@@ -32,8 +32,8 @@ use render::HelperPopup;
 mod dsp;
 use dsp::{WindowType, SidePaddingType, PADDING_HELP_TEXT};
 
-use std::{io, time::Duration};
-use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
+use std::{io};
+use termion::{input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Rect},

@@ -4,9 +4,8 @@ use sndfile::SndFileIO;
 use crate::sndfile::SndFile;
 use std::io::SeekFrom;
 
-use std::convert::{TryFrom, TryInto};
-// use num_integer::roots::Roots::sqrt;
-use num_integer::Roots;
+use std::convert::{TryFrom};
+
 
 use rayon::prelude::*;
 
@@ -67,15 +66,15 @@ impl DspData<WaveformParameters> for Waveform {
         for block_idx in 0..block_count {
 
             // Read block from file
-            let mut nb_frames: usize = 0;
+            // let mut nb_frames: usize = 0;
             let read = sndfile.read_to_slice(block_data.as_mut_slice());
-            match read {
+            let nb_frames = match read {
                 Ok(frames) => {
                     if frames == 0 { panic!("0 frames read")}
-                    nb_frames = frames;
+                    frames
                 },
                 Err(err) => panic!("{:?}", err)
-            }
+            };
 
             // Load into frames vector
             let frame_offset = block_idx * block_size;
@@ -236,7 +235,7 @@ mod tests {
         let mut zoom = Zoom::new(0.5f64).unwrap();
         let blocks_counts = [50usize, 100, 128, 150, 1024];
 
-        let mut waveform = Waveform::new(snd, WaveformParameters::default(), None).unwrap();
+        let waveform = Waveform::new(snd, WaveformParameters::default(), None).unwrap();
 
         // No zoom
         for ch_idx in 0..channels {

@@ -1,8 +1,7 @@
 
 use super::{Renderer, RenderingInfo};
-use crate::utils::{bindings, filled_rectangle::FilledRectangle};
-use termion::{event::Key};
-use tui::{backend::Backend, Frame, layout::{Alignment, Rect}, style::{Style, Modifier, Color}, text::{Spans, Span}, widgets::{Paragraph, Block, Borders, canvas::{Canvas, Rectangle}}};
+use crate::utils::{bindings};
+use tui::{backend::Backend, Frame, layout::{Alignment, Rect}, style::{Style, Modifier}, text::{Spans, Span}, widgets::{Paragraph, Block, Borders}};
 
 
 pub struct HelperPopup {

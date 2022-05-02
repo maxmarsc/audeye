@@ -1,38 +1,25 @@
-use super::Renderer;
 use super::greyscale_canva::TransposedGreyScaleCanva;
-// use crate::dsp::AsyncDspData;
-use super::{draw_text_info, RenderingInfo, renderer::ChannelRenderer};
+use super::{draw_text_info, renderer::ChannelRenderer};
 use core::panic;
 extern crate sndfile;
-// use crate::dsp::AudioRepresentationData;
-use crate::sndfile::{SndFileIO, SndFile};
 use crate::utils::Zoom;
-use std::thread::{self, JoinHandle};
-use std::sync::mpsc::{self, Receiver, TryRecvError, Sender};
 use std::convert::{TryFrom, TryInto};
 use fr::Image;
-use rand::Fill;
 use tui::Frame;
 use tui::backend::Backend;
-use tui::layout::{Rect, Alignment};
-use tui::text::Spans;
-use tui::widgets::{Paragraph, Wrap};
-use tui::widgets::canvas::Painter;
+use tui::layout::{Rect};
 use tui::{
     widgets::{
-        Chart, Dataset, GraphType, Block, Borders, Axis,
-        canvas::{Points, Shape, Canvas, Map, Rectangle},
+        Block,
+        canvas::{Canvas},
     },
     symbols::Marker,
-    style::{Style, Color, Modifier},
-    text::Span
+    style::{Color},
 };
-// use viuer::{print_from_file, Config};
 
-use crate::utils::filled_rectangle::FilledRectangle;
 use crate::dsp::{Spectrogram, AsyncDspData, SpectrogramParameters, AsyncDspDataState};
 
-use std::num::{NonZeroU32, NonZeroUsize};
+use std::num::{NonZeroU32};
 
 use fast_image_resize as fr;
 

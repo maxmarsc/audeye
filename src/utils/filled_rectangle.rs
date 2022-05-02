@@ -1,6 +1,6 @@
 use tui::{
     style::Color,
-    widgets::canvas::{Line, Painter, Shape},
+    widgets::canvas::{Painter, Shape},
 };
 
 /// Shape to draw a rectangle from a `Rect` with the given color

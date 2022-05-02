@@ -1,16 +1,12 @@
 extern crate sndfile;
 use crate::sndfile::SndFile;
-
-use std::{convert::TryFrom, io::SeekFrom, sync::mpsc::channel, fmt::Display, cmp::min};
+use std::{convert::TryFrom, io::SeekFrom, fmt::Display, cmp::min};
 use apodize::{hanning_iter, blackman_iter, hamming_iter};
-use realfft::num_traits::ops::saturating;
 use sndfile::SndFileIO;
 
 use super::DspErr;
-
 use crate::utils::deinterleave_vec;
 
-use rayon::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub enum WindowType {
@@ -127,7 +123,7 @@ impl SidePadding {
     }
 
     pub fn pad_left(&mut self, content: &mut [f64], next_sample: f64, channel: usize) {
-        if content.len() > self.padding_left[0].len() {
+        if content.len() > self.max_padding_left {
             panic!();
         }
         let pad_slice = match self.padding_type {
@@ -163,7 +159,7 @@ impl SidePadding {
     }
 
     pub fn pad_right(&mut self, content: &mut [f64], prev_sample: f64, channel: usize) {
-        if content.len() > self.padding_right[0].len() {
+        if content.len() > self.max_padding_right {
             panic!();
         }
         let pad_slice = match self.padding_type {
@@ -194,10 +190,6 @@ impl SidePadding {
             .for_each(|(pad_sample, content_sample)| {
                 *content_sample = *pad_sample; 
         });
-    }
-
-    pub fn left_side_offset(&self) -> usize {
-        self.max_padding_left
     }
 }
 
@@ -431,8 +423,6 @@ mod window_type {
 }
 
 mod side_padding {
-    use sndfile::SndFile;
-
     use crate::dsp::SidePaddingType;
     use crate::dsp::time_window::SidePadding;
 

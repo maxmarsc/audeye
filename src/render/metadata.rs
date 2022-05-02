@@ -7,13 +7,10 @@ use tui::{backend::Backend, text::Spans};
 use tui::Frame;
 use tui::layout::{Rect, Alignment, Constraint, Layout, Direction};
 use tui::widgets::{Block, Paragraph, Borders};
-
-use std::fmt::{self, Display};
 use std::convert::TryFrom;
 
 extern crate sndfile;
-use crate::sndfile::{SndFile, TagType};
-
+use crate::sndfile::{TagType};
 use super::{RenderingInfo, Renderer};
 
 

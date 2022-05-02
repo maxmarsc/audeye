@@ -118,10 +118,8 @@ impl Zoom {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Range;
-
     use super::*;
-    use rand::{Rng, prelude::ThreadRng};
+    use rand::{Rng};
     
     const VALID_MAX_VALUES: &[f64] = &[0.5f64, 1.0f64, 3.0f64, 0.000000001f64,
         0.99999999f64];
