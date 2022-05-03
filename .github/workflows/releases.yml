@@ -5,12 +5,16 @@ on:
   push:
     tags: "v*.*.*"
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   publish:
     name: "Tagged release"
     runs-on: "rust:slim-buster"
 
     steps:
+      - uses: actions/checkout@v3
       - name: "Prebuild"
         run: |
           apt-get update
@@ -18,8 +22,8 @@ jobs:
 
       - name: "Build & tests"
         run: |
-          cargo test --release
-          cargo build --release
+          cargo test --release --verbose
+          cargo build --release --verbose
       
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
