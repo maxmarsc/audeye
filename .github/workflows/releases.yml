@@ -1,0 +1,33 @@
+---
+name: "releases"
+
+on:
+  push:
+    tags: "v*.*.*"
+
+jobs:
+  publish:
+    name: "Tagged release"
+    runs-on: "rust:slim-buster"
+
+    steps:
+      - name: "Prebuild"
+        run: |
+          apt-get update
+          apt-get install -y libsndfile1-dev
+
+      - name: "Build & tests"
+        run: |
+          cargo test --release
+          cargo build --release
+      
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          title: audeye-linux-amd64
+          files: |
+            LICENSE
+            target/release/audeye
+
+  
