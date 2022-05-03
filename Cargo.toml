@@ -2,11 +2,11 @@
 name = "audeye"
 version = "0.1.0"
 edition = "2018"
-description = "A terminal user interface for audio content visualization"
+description = "A terminal user interface for audiofile content visualization"
 homepage = "https://github.com/maxmarsc/audeye"
 documentation = "https://github.com/maxmarsc/audeye"
 repository = "https://github.com/maxmarsc/audeye"
-keywords = ["audio", "tui", "cli", "terminal", "wav", "waveform", "rms", "peak", "metadata", "spectrogram", "fft", "file"]
+keywords = ["audiofile", "tui", "spectrogram", "waveform", "visualization"]
 categories = ["command-line-utilities"]
 authors = ["Maxime COUTANT <maxime.coutant@protonmail.com>"]
 license = "MIT"
