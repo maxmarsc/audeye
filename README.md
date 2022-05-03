@@ -40,12 +40,20 @@ very edges of the audio content
  - Ramp : fill with zeros and a small amplitude ramp to match the last/next sample
  - Loop : fill with the end/beginning of the audio file
 
+# Dependencies
+Audeye rely on Rust bindings to [libsndfile](https://github.com/libsndfile/libsndfile)
+
+## Debian / Ubuntu
+```
+apt-get install libsndfile1-dev
+```
 
 # Installation
 TBD
 
 # Build
 1. [Install Rust](https://www.rust-lang.org/tools/install)
+2. Install [libsndfile](#dependencies)
 2. Then run `cargo run <AUDIO_FILE_PATH>`
 
 ## Development
