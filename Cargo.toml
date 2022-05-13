@@ -1,6 +1,6 @@
 [package]
 name = "audeye"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
 description = "A terminal user interface for audiofile content visualization"
 homepage = "https://github.com/maxmarsc/audeye"
@@ -15,7 +15,6 @@ license = "MIT"
 
 [dependencies]
 structopt = { version = "0.3", default-features = false }
-hound = { version = "3.4"}
 terminal_size = { version = "0.1.17"}
 sndfile = "0.1.1"
 rayon = "1.5.1"
@@ -27,10 +26,11 @@ rustfft = "6.0.1"
 rand = "0.8"
 argh = "0.1"
 fast_image_resize = "0.7.0"
-image = "0.24.2"
 apodize = "1.0.0"
 audiotags = "0.2.7182"
 num-traits = "0.2.14"
 num-integer = "0.1.45"
+
+[dev-dependencies]
 assert_cmd = "2.0.4"
 predicates = "2.1.1"
