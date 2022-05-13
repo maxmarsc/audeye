@@ -1,9 +1,9 @@
 ---
-name: "releases"
+name: "pre-releases"
 
 on:
   push:
-    tags: '[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+    tags: 'v[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
 
 env:
   CARGO_TERM_COLOR: always
