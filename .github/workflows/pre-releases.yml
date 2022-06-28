@@ -11,10 +11,11 @@ env:
 jobs:
   publish:
     name: "Tagged release"
-    runs-on: "rust:slim-buster"
+    runs-on: "ubuntu:20.04"
 
     steps:
       - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
       - name: "Prebuild"
         run: |
           apt-get update
