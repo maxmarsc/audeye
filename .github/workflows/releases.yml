@@ -33,7 +33,7 @@ jobs:
         run: |
           cargo test --release --verbose
           cargo build --release --verbose
-          cp target/release/audeye "audeye-${{ steps.tagName.outputs.tag }}-linux-amd64"
+          cp target/release/audeye "audeye-${GIT_TAG_NAME}-linux-amd64"
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
