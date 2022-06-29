@@ -31,10 +31,16 @@ jobs:
           cargo test --release --verbose
           cargo build --release --verbose
       
+      - uses: olegtarasov/get-tag@v2.1
+        id: tagName
+        with:
+          tagRegex: "v[0-9]+.[0-9]+.[0-9]"
+
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: true
+          automatic_release_tag: ${{ steps.tagName.outputs.tag }}
           title: audeye-linux-amd64-rc
           files: |
             LICENSE
