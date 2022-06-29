@@ -3,7 +3,7 @@ name: "pre-releases"
 
 on:
   push:
-    tags: 'v[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+    tags: 'v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+'
 
 env:
   CARGO_TERM_COLOR: always
@@ -33,15 +33,12 @@ jobs:
       
       - uses: olegtarasov/get-tag@v2.1
         id: tagName
-        with:
-          tagRegex: "v[0-9]+.[0-9]+.[0-9]"
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: true
-          automatic_release_tag: ${{ steps.tagName.outputs.tag }}
-          title: audeye-linux-amd64-rc
+          title: "audeye-${{ steps.tagName.outputs.tag }}-linux-amd64"
           files: |
             LICENSE
             target/release/audeye
