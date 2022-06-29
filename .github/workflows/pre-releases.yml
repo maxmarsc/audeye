@@ -26,21 +26,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsndfile1-dev
 
+      - uses: olegtarasov/get-tag@v2.1
+        id: tagName
+
       - name: "Build & tests"
         run: |
           cargo test --release --verbose
           cargo build --release --verbose
-      
-      - uses: olegtarasov/get-tag@v2.1
-        id: tagName
+          cp target/release/audeye "audeye-${{ steps.tagName.outputs.tag }}-linux-amd64"
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: true
-          title: "audeye-${{ steps.tagName.outputs.tag }}-linux-amd64"
+          title: "${{ steps.tagName.outputs.tag }}"
           files: |
             LICENSE
-            target/release/audeye
+            "audeye-${{ steps.tagName.outputs.tag }}-linux-amd64"
 
   
