@@ -11,11 +11,14 @@ env:
 jobs:
   publish:
     name: "Tagged release"
-    runs-on: "ubuntu:20.04"
+    runs-on: "ubuntu:latest"
 
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.59.0
+          override: true
       - name: "Prebuild"
         run: |
           apt-get update
