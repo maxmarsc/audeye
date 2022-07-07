@@ -56,7 +56,7 @@ jobs:
           override: true
       - run: |
           sudo apt-get update
-          apt-get install -y libsndfile1-dev
+          sudo apt-get install -y libsndfile1-dev
       - uses: actions-rs/cargo@v1
         with:
           command: publish
