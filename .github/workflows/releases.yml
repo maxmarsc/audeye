@@ -42,7 +42,7 @@ jobs:
           title: "${{ steps.tagName.outputs.tag }}"
           files: |
             LICENSE
-            "audeye-${{ steps.tagName.outputs.tag }}-linux-amd64"
+            audeye-${{ steps.tagName.outputs.tag }}-linux-amd64
 
   publish-cargo:
     name: "Crates.io release"

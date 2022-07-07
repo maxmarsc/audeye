@@ -9,8 +9,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  publish:
-    name: "Tagged release"
+  publish-rc:
+    name: "Tagged pre-release"
     runs-on: "ubuntu-latest"
 
     steps:
@@ -42,6 +42,6 @@ jobs:
           title: "${{ steps.tagName.outputs.tag }}"
           files: |
             LICENSE
-            "audeye-${{ steps.tagName.outputs.tag }}-linux-amd64"
+            audeye-${{ steps.tagName.outputs.tag }}-linux-amd64
 
   
