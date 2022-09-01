@@ -130,7 +130,7 @@ impl<T : DspData<P> + Send + 'static, P : Send + 'static> AsyncDspData<T, P> {
                 Ok(data) => {
                     // Success, we update the state and return the data
                     let _ = rendered_tx.send(AsyncDspDataState::Finished);
-                    return data;
+                    data
                 },
                 Err(dsp_err) => {
                     // Failure, we stop the program and display the error

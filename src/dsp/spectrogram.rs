@@ -64,7 +64,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
         let mut scratch  = r2c.make_scratch_vec();
 
         // Compute the Spectrogram
-        let mut batch_idx = 0 as usize;
+        let mut batch_idx = 0usize;
         let fft_len = parameters.window_size as f64 / 2f64;
         let correction_factor = parameters.window_type.correction_factor();
 
@@ -147,10 +147,6 @@ impl Spectrogram {
 
     pub fn num_bins(&self) -> usize {
         self.num_bins
-    }
-
-    pub fn num_bands(&self) -> usize {
-        self.num_bands
     }
 }
 

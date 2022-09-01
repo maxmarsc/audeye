@@ -105,7 +105,7 @@ fn compute_duration_string(samplerate: f64, frames: f64) -> String {
     let duration_m = f64::floor(duration / 60f64);
     let duration_s = duration % 60f64;
 
-    String::from(format!("{:02.0}:{:02.0}:{:02.2}", duration_h, duration_m, duration_s))
+    format!("{:02.0}:{:02.0}:{:02.2}", duration_h, duration_m, duration_s)
 }
 
 struct Metadata {
@@ -145,16 +145,16 @@ impl Metadata {
             endianess : endianess_to_string(snd.get_endian()),
             frames: snd.len().unwrap().to_string(),
             duration: compute_duration_string(snd.get_samplerate() as f64, snd.len().unwrap() as f64),
-            title: snd.get_tag(TagType::Title).unwrap_or(default_msg.to_string()),
-            copyright: snd.get_tag(TagType::Copyright).unwrap_or(default_msg.to_string()),
-            artist: snd.get_tag(TagType::Artist).unwrap_or(default_msg.to_string()),
-            software: snd.get_tag(TagType::Software).unwrap_or(default_msg.to_string()),
-            comment: snd.get_tag(TagType::Comment).unwrap_or(default_msg.to_string()),
-            date: snd.get_tag(TagType::Date).unwrap_or(default_msg.to_string()),
-            album: snd.get_tag(TagType::Album).unwrap_or(default_msg.to_string()),
-            license: snd.get_tag(TagType::License).unwrap_or(default_msg.to_string()),
-            track_number: snd.get_tag(TagType::Tracknumber).unwrap_or(default_msg.to_string()),
-            genre: snd.get_tag(TagType::Genre).unwrap_or(default_msg.to_string())
+            title: snd.get_tag(TagType::Title).unwrap_or_else(|| default_msg.to_string()),
+            copyright: snd.get_tag(TagType::Copyright).unwrap_or_else(|| default_msg.to_string()),
+            artist: snd.get_tag(TagType::Artist).unwrap_or_else(|| default_msg.to_string()),
+            software: snd.get_tag(TagType::Software).unwrap_or_else(|| default_msg.to_string()),
+            comment: snd.get_tag(TagType::Comment).unwrap_or_else(|| default_msg.to_string()),
+            date: snd.get_tag(TagType::Date).unwrap_or_else(|| default_msg.to_string()),
+            album: snd.get_tag(TagType::Album).unwrap_or_else(|| default_msg.to_string()),
+            license: snd.get_tag(TagType::License).unwrap_or_else(|| default_msg.to_string()),
+            track_number: snd.get_tag(TagType::Tracknumber).unwrap_or_else(|| default_msg.to_string()),
+            genre: snd.get_tag(TagType::Genre).unwrap_or_else(|| default_msg.to_string())
         }
     }
 

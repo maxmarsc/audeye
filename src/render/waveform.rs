@@ -56,7 +56,7 @@ use crate::dsp::{Waveform, AsyncDspData, WaveformParameters, AsyncDspDataState, 
 //     }
 // }
 
-fn draw_shape(ctx: &mut Context, points: &Vec<WaveformPoint<i32>>) {
+fn draw_shape(ctx: &mut Context, points: &[WaveformPoint<i32>]) {
     let mut prev_peak_up = 0f64;
     let mut prev_peak_down = 0f64;
 

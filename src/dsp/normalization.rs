@@ -19,5 +19,5 @@ pub fn compute_norm(sndfile: &mut SndFile) -> f64 {
     if max <= 0i32 {
         return f64::EPSILON;
     }
-    return max as f64 / i32::MAX as f64;
+    max as f64 / i32::MAX as f64
 }

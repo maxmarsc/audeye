@@ -146,7 +146,7 @@ impl Waveform {
             });
     
 
-        if remains.len() > 0 {
+        if !remains.is_empty() {
             // Consume the end
             points[block_count - 1] = compute_point(remains);
         }

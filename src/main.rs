@@ -160,19 +160,16 @@ fn main() ->  Result<(), io::Error> {
     // Check file
     let snd_res = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
         .from_path(&args.path);
-    match snd_res {
-        Err(err) => {
-            return Err(match err {
-                SndFileError::UnrecognisedFormat(msg) => Error::new(ErrorKind::InvalidData, msg),
-                SndFileError::SystemError(msg) => Error::new(ErrorKind::InvalidData, msg),
-                SndFileError::MalformedFile(msg) => Error::new(ErrorKind::InvalidData, msg),
-                SndFileError::UnsupportedEncoding(msg) => Error::new(ErrorKind::InvalidData, msg),
-                SndFileError::InvalidParameter(msg) => Error::new(ErrorKind::InvalidData, msg),
-                SndFileError::InternalError(msg) => Error::new(ErrorKind::InvalidData, msg),
-                SndFileError::IOError(io_err) => io_err,
-            })
-        }
-        _ => ()
+    if let Err(err) = snd_res {
+        return Err(match err {
+            SndFileError::UnrecognisedFormat(msg) => Error::new(ErrorKind::InvalidData, msg),
+            SndFileError::SystemError(msg) => Error::new(ErrorKind::InvalidData, msg),
+            SndFileError::MalformedFile(msg) => Error::new(ErrorKind::InvalidData, msg),
+            SndFileError::UnsupportedEncoding(msg) => Error::new(ErrorKind::InvalidData, msg),
+            SndFileError::InvalidParameter(msg) => Error::new(ErrorKind::InvalidData, msg),
+            SndFileError::InternalError(msg) => Error::new(ErrorKind::InvalidData, msg),
+            SndFileError::IOError(io_err) => io_err,
+        })
     }
     
     let snd = snd_res.unwrap();

@@ -115,8 +115,8 @@ impl SidePadding {
 
         Self{
             padding_type,
-            padding_left: padding_left,
-            padding_right: padding_right,
+            padding_left,
+            padding_right,
             max_padding_right,
             max_padding_left
         }
@@ -214,22 +214,22 @@ pub const PADDING_HELP_TEXT: &str =
 impl SidePaddingType {
     pub fn parse(name: &str) -> Result<Self, SidePaddingTypeParseError> {
         if name == ZEROS {
-            return Ok(Self::Zeros);
+            Ok(Self::Zeros)
         } else if name == RAMP {
-            return Ok(Self::SmoothRamp);
+            Ok(Self::SmoothRamp)
         } else if name == LOOP {
-            return Ok(Self::Loop);
+            Ok(Self::Loop)
         } else {
-            return Err(SidePaddingTypeParseError);
+            Err(SidePaddingTypeParseError)
         }
     }
 
     pub fn possible_values() -> &'static [&'static str] {
-        return &[ZEROS, RAMP, LOOP];
+        &[ZEROS, RAMP, LOOP]
     }
 
     pub fn default() -> &'static str {
-        return ZEROS;
+        ZEROS
     }
 }
 
@@ -301,7 +301,7 @@ impl TimeWindowBatcher {
             // Beginning of the file, need a zero offset at the start
             usize::try_from(side_offset as u64 - new_seek_idx).unwrap()
         } else {
-            0 as usize
+            0_usize
         };
 
         let right_padding_idx = if new_seek_idx + self.window_size as u64 > self.frames {

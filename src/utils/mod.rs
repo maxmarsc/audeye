@@ -5,8 +5,8 @@ pub use zoom::*;
 pub mod event;
 
 use num_traits::{NumAssign};
-use rand::distributions::{Distribution, Uniform};
-use rand::rngs::ThreadRng;
+// use rand::distributions::{Distribution, Uniform};
+// use rand::rngs::ThreadRng;
 
 // #[repr(transparent)]
 // pub struct Sample<T : NumAssign>(T);
@@ -32,55 +32,59 @@ pub fn deinterleave<T : NumAssign + Copy>(channels: usize, src: &[T], dst: &mut 
         });
 }
 
-#[derive(Clone)]
-pub struct RandomSignal {
-    distribution: Uniform<u64>,
-    rng: ThreadRng,
-}
+/* === Useful structs that could be helpful when debugging === 
+    Commented to remove clippy warning
+*/
 
-impl RandomSignal {
-    pub fn new(lower: u64, upper: u64) -> RandomSignal {
-        RandomSignal {
-            distribution: Uniform::new(lower, upper),
-            rng: rand::thread_rng(),
-        }
-    }
-}
+// #[derive(Clone)]
+// pub struct RandomSignal {
+//     distribution: Uniform<u64>,
+//     rng: ThreadRng,
+// }
 
-impl Iterator for RandomSignal {
-    type Item = u64;
-    fn next(&mut self) -> Option<u64> {
-        Some(self.distribution.sample(&mut self.rng))
-    }
-}
+// impl RandomSignal {
+//     pub fn new(lower: u64, upper: u64) -> RandomSignal {
+//         RandomSignal {
+//             distribution: Uniform::new(lower, upper),
+//             rng: rand::thread_rng(),
+//         }
+//     }
+// }
 
-#[derive(Clone)]
-pub struct SinSignal {
-    x: f64,
-    interval: f64,
-    period: f64,
-    scale: f64,
-}
+// impl Iterator for RandomSignal {
+//     type Item = u64;
+//     fn next(&mut self) -> Option<u64> {
+//         Some(self.distribution.sample(&mut self.rng))
+//     }
+// }
 
-impl SinSignal {
-    pub fn new(interval: f64, period: f64, scale: f64) -> SinSignal {
-        SinSignal {
-            x: 0.0,
-            interval,
-            period,
-            scale,
-        }
-    }
-}
+// #[derive(Clone)]
+// pub struct SinSignal {
+//     x: f64,
+//     interval: f64,
+//     period: f64,
+//     scale: f64,
+// }
 
-impl Iterator for SinSignal {
-    type Item = (f64, f64);
-    fn next(&mut self) -> Option<Self::Item> {
-        let point = (self.x, (self.x * 1.0 / self.period).sin() * self.scale);
-        self.x += self.interval;
-        Some(point)
-    }
-}
+// impl SinSignal {
+//     pub fn new(interval: f64, period: f64, scale: f64) -> SinSignal {
+//         SinSignal {
+//             x: 0.0,
+//             interval,
+//             period,
+//             scale,
+//         }
+//     }
+// }
+
+// impl Iterator for SinSignal {
+//     type Item = (f64, f64);
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let point = (self.x, (self.x * 1.0 / self.period).sin() * self.scale);
+//         self.x += self.interval;
+//         Some(point)
+//     }
+// }
 
 pub struct TabsState<'a> {
     pub titles: Vec<&'a str>,
