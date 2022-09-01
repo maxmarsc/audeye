@@ -27,7 +27,7 @@ rand = "0.8"
 argh = "0.1"
 fast_image_resize = "0.7.0"
 apodize = "1.0.0"
-audiotags = "0.2.7182"
+audiotags = "0.4"
 num-traits = "0.2.14"
 num-integer = "0.1.45"
 
