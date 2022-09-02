@@ -46,6 +46,9 @@ jobs:
   publish:
     name: "Tagged release"
     runs-on: "ubuntu-latest"
+    needs:
+      - fmt
+      - clippy
 
     steps:
       - uses: actions/checkout@v3
