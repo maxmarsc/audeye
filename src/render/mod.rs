@@ -20,7 +20,7 @@ use renderer::{draw_text_info};
 pub enum RendererType<'a> {
     Waveform(WaveformRenderer),
     Spectral(SpectralRenderer<'a>),
-    Metadata(MetadataRenderer)
+    Metadata(Box<MetadataRenderer>)
 }
 
 impl Renderer for RendererType<'_> {

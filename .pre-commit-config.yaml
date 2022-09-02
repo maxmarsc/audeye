@@ -8,3 +8,11 @@ repos:
         language: system
         types: [rust]
         pass_filenames: false
+    -   id: clippy
+        name: clippy
+        description: Lint rust sources
+        entry: cargo clippy
+        language: system
+        args: ["--", "-D", "warnings"]
+        types: [rust]
+        pass_filenames: false

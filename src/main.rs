@@ -192,7 +192,7 @@ fn main() ->  Result<(), io::Error> {
             side_padding_type: args.fft_padding_type
         },
         args.normalize));
-    let mut metadata_render = RendererType::Metadata(MetadataRenderer::new(&args.path));
+    let mut metadata_render = RendererType::Metadata(Box::new(MetadataRenderer::new(&args.path)));
 
 
     // Build the app
