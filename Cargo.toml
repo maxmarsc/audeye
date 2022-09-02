@@ -18,8 +18,8 @@ structopt = { version = "0.3", default-features = false }
 terminal_size = { version = "0.1.17"}
 sndfile = "0.1.1"
 rayon = "1.5.1"
-tui = { version = "0.17", default-features=true, features=["crossterm"]}
-crossterm = "0.20"
+tui = { version = "0.19", default-features=true, features=["crossterm"]}
+crossterm = "0.25"
 termion = "1.5"
 realfft = "3.0.0"
 rustfft = "6.0.1"
