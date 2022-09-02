@@ -19,15 +19,14 @@ impl Shape for FilledRectangle {
             Some(c) => c,
             None => return,
         };
-        let (e_x, e_y) = match painter.get_point(self.x + self.width,
-                                                             self.y - self.height) {
+        let (e_x, e_y) = match painter.get_point(self.x + self.width, self.y - self.height) {
             Some(c) => c,
             None => return,
         };
 
         for x in b_x..e_x {
             for y in b_y..e_y {
-                painter.paint(x,y, self.color);
+                painter.paint(x, y, self.color);
             }
         }
     }

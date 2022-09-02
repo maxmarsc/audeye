@@ -1,5 +1,5 @@
-use tui::widgets::canvas::{Shape, Painter};
 use tui::style::Color;
+use tui::widgets::canvas::{Painter, Shape};
 pub struct TransposedGreyScaleCanva<'a> {
     img_buffer: &'a [u8],
     width: usize,
@@ -7,11 +7,11 @@ pub struct TransposedGreyScaleCanva<'a> {
 }
 
 impl<'a> TransposedGreyScaleCanva<'a> {
-    pub fn new(img_buffer : &'a [u8], width: usize, height: usize) -> TransposedGreyScaleCanva<'a> {
+    pub fn new(img_buffer: &'a [u8], width: usize, height: usize) -> TransposedGreyScaleCanva<'a> {
         TransposedGreyScaleCanva {
-            img_buffer, 
-            width, 
-            height
+            img_buffer,
+            width,
+            height,
         }
     }
 }

@@ -1,19 +1,18 @@
 extern crate sndfile;
 use crate::sndfile::SndFile;
-use std::{convert::TryFrom, io::SeekFrom, fmt::Display, cmp::min};
-use apodize::{hanning_iter, blackman_iter, hamming_iter};
+use apodize::{blackman_iter, hamming_iter, hanning_iter};
 use sndfile::SndFileIO;
+use std::{cmp::min, convert::TryFrom, fmt::Display, io::SeekFrom};
 
 use super::DspErr;
 use crate::utils::deinterleave_vec;
-
 
 #[derive(Debug, Clone, Copy)]
 pub enum WindowType {
     Blackman,
     Hanning,
     Hamming,
-    Uniform
+    Uniform,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -36,7 +35,7 @@ impl WindowType {
             Self::Blackman => blackman_iter(size).collect(),
             Self::Hamming => hamming_iter(size).collect(),
             Self::Hanning => hanning_iter(size).collect(),
-            Self::Uniform => vec![1f64; size]
+            Self::Uniform => vec![1f64; size],
         }
     }
 
@@ -45,7 +44,7 @@ impl WindowType {
             Self::Blackman => 2.80f64,
             Self::Hamming => 1.85f64,
             Self::Hanning => 2f64,
-            Self::Uniform => 1f64
+            Self::Uniform => 1f64,
         }
     }
 
@@ -76,7 +75,7 @@ impl WindowType {
 pub enum SidePaddingType {
     Zeros,
     SmoothRamp,
-    Loop
+    Loop,
 }
 
 struct SidePadding {
@@ -84,15 +83,20 @@ struct SidePadding {
     padding_left: Vec<Vec<f64>>,
     padding_right: Vec<Vec<f64>>,
     max_padding_right: usize,
-    max_padding_left: usize
+    max_padding_left: usize,
 }
 
 impl SidePadding {
-    fn new(padding_type: SidePaddingType, sndfile: &mut SndFile, max_padding_left: usize, max_padding_right: usize) -> Self {
+    fn new(
+        padding_type: SidePaddingType,
+        sndfile: &mut SndFile,
+        max_padding_left: usize,
+        max_padding_right: usize,
+    ) -> Self {
         let channels = sndfile.get_channels();
 
-        let mut padding_left = vec![vec![0f64;max_padding_left]; channels];
-        let mut padding_right  = vec![vec![0f64;max_padding_right]; channels];
+        let mut padding_left = vec![vec![0f64; max_padding_left]; channels];
+        let mut padding_right = vec![vec![0f64; max_padding_right]; channels];
 
         if padding_type == SidePaddingType::Loop {
             let frames = sndfile.len().unwrap();
@@ -100,22 +104,34 @@ impl SidePadding {
 
             // Read the beginning of the file
             sndfile.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
-            sndfile.read_to_slice(interleaved_data.as_mut_slice()).unwrap();
-            deinterleave_vec(channels, interleaved_data.as_slice(), padding_right.as_mut_slice());
-            
+            sndfile
+                .read_to_slice(interleaved_data.as_mut_slice())
+                .unwrap();
+            deinterleave_vec(
+                channels,
+                interleaved_data.as_slice(),
+                padding_right.as_mut_slice(),
+            );
+
             // Read the end of the file
             let idx_offset = frames - max_padding_left as u64;
             sndfile.seek(SeekFrom::Start(idx_offset)).unwrap();
-            sndfile.read_to_slice(interleaved_data.as_mut_slice()).unwrap();
-            deinterleave_vec(channels, &interleaved_data[..max_padding_left*channels], padding_left.as_mut_slice());
+            sndfile
+                .read_to_slice(interleaved_data.as_mut_slice())
+                .unwrap();
+            deinterleave_vec(
+                channels,
+                &interleaved_data[..max_padding_left * channels],
+                padding_left.as_mut_slice(),
+            );
         }
 
-        Self{
+        Self {
             padding_type,
             padding_left,
             padding_right,
             max_padding_right,
-            max_padding_left
+            max_padding_left,
         }
     }
 
@@ -132,27 +148,32 @@ impl SidePadding {
                 let start_idx = content.len() - ramp_size;
 
                 // Fill the start with zeros
-                self.padding_left[channel][..start_idx].iter_mut().for_each(|val| *val = 0f64);
+                self.padding_left[channel][..start_idx]
+                    .iter_mut()
+                    .for_each(|val| *val = 0f64);
 
                 // Fill the rest
-                self.padding_left[channel][start_idx..content.len()].iter_mut()
+                self.padding_left[channel][start_idx..content.len()]
+                    .iter_mut()
                     .for_each(|pad_sample| {
                         *pad_sample = crt_val;
                         crt_val += step;
-                });
+                    });
 
                 &self.padding_left[channel][..content.len()]
-            },
+            }
             _ => {
                 let start = self.max_padding_left - content.len();
                 &self.padding_left[channel][start..]
             }
         };
 
-        pad_slice.iter().zip(content.iter_mut())
+        pad_slice
+            .iter()
+            .zip(content.iter_mut())
             .for_each(|(pad_sample, content_sample)| {
-                *content_sample = *pad_sample; 
-        });
+                *content_sample = *pad_sample;
+            });
     }
 
     pub fn pad_right(&mut self, content: &mut [f64], prev_sample: f64, channel: usize) {
@@ -166,27 +187,32 @@ impl SidePadding {
                 let step = prev_sample / ramp_size as f64;
 
                 // Fill the start with the ramp
-                self.padding_right[channel][..ramp_size].iter_mut()
+                self.padding_right[channel][..ramp_size]
+                    .iter_mut()
                     .for_each(|pad_sample| {
                         *pad_sample = crt_val;
                         crt_val += step;
-                });
+                    });
 
                 // Fill the rest with zeros
-                self.padding_right[channel][ramp_size..].iter_mut().for_each(|val| *val = 0f64);
+                self.padding_right[channel][ramp_size..]
+                    .iter_mut()
+                    .for_each(|val| *val = 0f64);
 
                 &self.padding_right[channel][..content.len()]
-            },
+            }
             _ => {
                 // let start = self.left_side_offset - content.len();
                 &self.padding_right[channel][..content.len()]
             }
         };
 
-        pad_slice.iter().zip(content.iter_mut())
+        pad_slice
+            .iter()
+            .zip(content.iter_mut())
             .for_each(|(pad_sample, content_sample)| {
-                *content_sample = *pad_sample; 
-        });
+                *content_sample = *pad_sample;
+            });
     }
 }
 
@@ -202,7 +228,7 @@ impl Display for SidePaddingTypeParseError {
 const ZEROS: &str = "zeros";
 const RAMP: &str = "ramp";
 const LOOP: &str = "loop";
-pub const PADDING_HELP_TEXT: &str = 
+pub const PADDING_HELP_TEXT: &str =
     "How to fill the missing samples for the firsts and lasts sample windows
     \tzeros : fill with zeros samples
     \tramp : small linear ramp to match the last/next sample
@@ -240,13 +266,21 @@ pub struct TimeWindowBatcher {
     batch: Vec<Vec<f64>>,
     window: Vec<f64>,
     tmp_interleaved_block: Vec<f64>,
-    side_padding: SidePadding
+    side_padding: SidePadding,
 }
 
 impl TimeWindowBatcher {
-    pub fn new(mut sndfile: SndFile, window_size: usize, overlap: f64, window_type: WindowType, side_padding: SidePaddingType) -> Result<TimeWindowBatcher, DspErr> {
+    pub fn new(
+        mut sndfile: SndFile,
+        window_size: usize,
+        overlap: f64,
+        window_type: WindowType,
+        side_padding: SidePaddingType,
+    ) -> Result<TimeWindowBatcher, DspErr> {
         if 0f64 >= overlap || overlap >= 1f64 {
-            return Err(DspErr::new("Overlap values should be contained within ]0:1["))
+            return Err(DspErr::new(
+                "Overlap values should be contained within ]0:1[",
+            ));
         }
 
         let frames = sndfile.len().unwrap();
@@ -260,9 +294,10 @@ impl TimeWindowBatcher {
         };
 
         let max_padding_left = (window_size - tband_size) / 2;
-        let side_padding = SidePadding::new(side_padding, &mut sndfile, max_padding_left, window_size);
+        let side_padding =
+            SidePadding::new(side_padding, &mut sndfile, max_padding_left, window_size);
 
-        Ok(TimeWindowBatcher{
+        Ok(TimeWindowBatcher {
             sndfile,
             frames,
             tband_size,
@@ -272,7 +307,7 @@ impl TimeWindowBatcher {
             batch: vec![vec![0f64; window_size]; channels],
             window: window_type.build_window(window_size),
             tmp_interleaved_block: vec![0f64; window_size * channels],
-            side_padding
+            side_padding,
         })
     }
 
@@ -288,8 +323,9 @@ impl TimeWindowBatcher {
 
         // Compute the first sample to seek
         let new_seek_idx = self.crt_band_idx as u64 * self.tband_size as u64;
-        self.sndfile.seek(SeekFrom::Start(new_seek_idx as u64)).unwrap_or_else(
-                |_| panic!("Failed to seek frame {}", new_seek_idx));
+        self.sndfile
+            .seek(SeekFrom::Start(new_seek_idx as u64))
+            .unwrap_or_else(|_| panic!("Failed to seek frame {}", new_seek_idx));
 
         // The offset left and right of the window lobe
         let side_offset = (self.window_size - self.tband_size) / 2;
@@ -311,42 +347,51 @@ impl TimeWindowBatcher {
         let channels = self.batch.len();
 
         // Read interleaved data
-        let interleaved_write_slice = &mut self.tmp_interleaved_block[left_padding_idx*channels..right_padding_idx*channels];
+        let interleaved_write_slice = &mut self.tmp_interleaved_block
+            [left_padding_idx * channels..right_padding_idx * channels];
         match self.sndfile.read_to_slice(interleaved_write_slice) {
             Ok(frames) => {
                 if frames != right_padding_idx - left_padding_idx {
-                    panic!("Only read {} frames over {}", frames, right_padding_idx - left_padding_idx);
+                    panic!(
+                        "Only read {} frames over {}",
+                        frames,
+                        right_padding_idx - left_padding_idx
+                    );
                 }
-            },
-            Err(_) => { panic!("Failed to read"); }
+            }
+            Err(_) => {
+                panic!("Failed to read");
+            }
         }
-        
+
         // Write the padding zeros - TODO: vectorize ?
         for (channel, ch_vec) in self.batch.iter_mut().enumerate() {
             // Left padding
             let next_sample = ch_vec[left_padding_idx];
-            self.side_padding.pad_left(&mut ch_vec[..left_padding_idx], next_sample, channel);
+            self.side_padding
+                .pad_left(&mut ch_vec[..left_padding_idx], next_sample, channel);
 
             // Right padding
             let prev_sample = ch_vec[right_padding_idx - 1];
-            self.side_padding.pad_right(&mut ch_vec[right_padding_idx..], prev_sample, channel);
+            self.side_padding
+                .pad_right(&mut ch_vec[right_padding_idx..], prev_sample, channel);
         }
 
         {
             // Write deinterleaved data into batch vector
             let batch_mut_slice = self.batch.as_mut_slice();
-            interleaved_write_slice.chunks(channels)
+            interleaved_write_slice
+                .chunks(channels)
                 .enumerate()
                 .for_each(|(frame_idx, samples)| {
                     for (channel, value) in samples.iter().enumerate() {
                         batch_mut_slice[channel][left_padding_idx + frame_idx] = *value;
                     }
-            });
+                });
         }
 
         // Apply window to the batch
         for ch_vec in &mut self.batch {
-
             // Faster ? see : https://www.nickwilcox.com/blog/autovec/
             let window_slice = self.window.as_slice();
             let ch_vec_slice = &mut ch_vec[0..window_slice.len()];
@@ -357,282 +402,337 @@ impl TimeWindowBatcher {
         }
 
         // build return type
-        let ret : Vec<&mut [f64]> = self.batch.iter_mut()
-            .map(|v| v.as_mut_slice()).collect();
+        let ret: Vec<&mut [f64]> = self.batch.iter_mut().map(|v| v.as_mut_slice()).collect();
 
         // Update index
         self.crt_band_idx += 1;
 
         Some(ret)
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
     use std::path::{Path, PathBuf};
 
-const WINDOW_SIZES: &[usize] = &[256, 512, 1024, 2048, 4096, 8192, 333, 10000, 984];
+    const WINDOW_SIZES: &[usize] = &[256, 512, 1024, 2048, 4096, 8192, 333, 10000, 984];
 
-fn get_test_files_location() -> PathBuf {
-    return Path::new(&env!("CARGO_MANIFEST_DIR").to_string())
-        .join("tests")
-        .join("files");
-}
-
-mod window_type {
-    use crate::dsp::WindowType;
-
-    use super::WINDOW_SIZES;
-
-
-    #[test]
-    fn parse_default() {
-        let _ = 
-
-        WindowType::parse(WindowType::default()).unwrap();
+    fn get_test_files_location() -> PathBuf {
+        return Path::new(&env!("CARGO_MANIFEST_DIR").to_string())
+            .join("tests")
+            .join("files");
     }
 
-    #[test]
-    fn parse_all() {
-        for value in WindowType::possible_values() {
-            WindowType::parse(value).unwrap();
+    mod window_type {
+        use crate::dsp::WindowType;
+
+        use super::WINDOW_SIZES;
+
+        #[test]
+        fn parse_default() {
+            let _ = WindowType::parse(WindowType::default()).unwrap();
         }
-    }
 
-    #[test]
-    fn build_window() {
-        for value in WindowType::possible_values() {
-            let wtype = WindowType::parse(value).unwrap();
+        #[test]
+        fn parse_all() {
+            for value in WindowType::possible_values() {
+                WindowType::parse(value).unwrap();
+            }
+        }
 
-            for wsize in WINDOW_SIZES {
-                let window = wtype.build_window(*wsize);
-                assert_eq!(window.len(), *wsize);
+        #[test]
+        fn build_window() {
+            for value in WindowType::possible_values() {
+                let wtype = WindowType::parse(value).unwrap();
 
-                for sample in window {
-                    assert!(sample <= 1f64);
-                    assert!(sample >= 0f64);
+                for wsize in WINDOW_SIZES {
+                    let window = wtype.build_window(*wsize);
+                    assert_eq!(window.len(), *wsize);
+
+                    for sample in window {
+                        assert!(sample <= 1f64);
+                        assert!(sample >= 0f64);
+                    }
                 }
             }
         }
     }
-}
 
-mod side_padding {
-    use crate::dsp::SidePaddingType;
-    use crate::dsp::time_window::SidePadding;
+    mod side_padding {
+        use crate::dsp::time_window::SidePadding;
+        use crate::dsp::SidePaddingType;
 
-    use super::get_test_files_location;
+        use super::get_test_files_location;
 
-    #[test]
-    fn default() {
-        const PADDING_LEFT: usize = 1024;
-        const WINDOW_SIZE: usize = 4096;
+        #[test]
+        fn default() {
+            const PADDING_LEFT: usize = 1024;
+            const WINDOW_SIZE: usize = 4096;
 
-        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
+            let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
 
-        let mut data = vec![0f64; WINDOW_SIZE];
-    
-        let default_type = SidePaddingType::parse(SidePaddingType::default()).unwrap();
-        let mut padder = SidePadding::new(default_type, &mut snd, PADDING_LEFT, WINDOW_SIZE);
+            let mut data = vec![0f64; WINDOW_SIZE];
 
-        for i in 0..snd.get_channels() {
-            padder.pad_left(&mut data[..PADDING_LEFT / 2], 1f64, i);
-            padder.pad_right(&mut data[..WINDOW_SIZE / 2], 1f64, i);
-        }
-    }
+            let default_type = SidePaddingType::parse(SidePaddingType::default()).unwrap();
+            let mut padder = SidePadding::new(default_type, &mut snd, PADDING_LEFT, WINDOW_SIZE);
 
-    #[test]
-    fn possible_values() {
-        const PADDING_LEFT: usize = 1024;
-        const WINDOW_SIZE: usize = 4096;
-
-        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-        let mut data = vec![0f64; WINDOW_SIZE];
-
-        for padding_type_str in SidePaddingType::possible_values() {
-            let padding_type = SidePaddingType::parse(padding_type_str).unwrap();
-            let mut padder = SidePadding::new(padding_type, &mut snd, PADDING_LEFT, WINDOW_SIZE);
-    
             for i in 0..snd.get_channels() {
                 padder.pad_left(&mut data[..PADDING_LEFT / 2], 1f64, i);
                 padder.pad_right(&mut data[..WINDOW_SIZE / 2], 1f64, i);
             }
         }
-    }
 
-    #[test]
-    #[should_panic]
-    fn padding_left_oversize_zeros() {
-        const PADDING_LEFT: usize = 1024;
-        const PADDING_RIGHT: usize = 4096;
+        #[test]
+        fn possible_values() {
+            const PADDING_LEFT: usize = 1024;
+            const WINDOW_SIZE: usize = 4096;
 
-        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-        let mut data = vec![0f64; PADDING_LEFT * 2];
+            let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
+            let mut data = vec![0f64; WINDOW_SIZE];
 
-        let mut padder = SidePadding::new(SidePaddingType::Zeros, &mut snd, PADDING_LEFT, PADDING_RIGHT);
-        padder.pad_left(&mut data[..PADDING_LEFT * 2], 1f64, 0);
-    }
+            for padding_type_str in SidePaddingType::possible_values() {
+                let padding_type = SidePaddingType::parse(padding_type_str).unwrap();
+                let mut padder =
+                    SidePadding::new(padding_type, &mut snd, PADDING_LEFT, WINDOW_SIZE);
 
-    #[test]
-    #[should_panic]
-    fn padding_left_oversize_loop() {
-        const PADDING_LEFT: usize = 1024;
-        const PADDING_RIGHT: usize = 4096;
-
-        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-        let mut data = vec![0f64; PADDING_LEFT * 2];
-
-        let mut padder = SidePadding::new(SidePaddingType::Loop, &mut snd, PADDING_LEFT, PADDING_RIGHT);
-        padder.pad_left(&mut data[..PADDING_LEFT * 2], 1f64, 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn padding_left_oversize_ramp() {
-        const PADDING_LEFT: usize = 1024;
-        const PADDING_RIGHT: usize = 4096;
-
-        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-        let mut data = vec![0f64; PADDING_LEFT * 2];
-
-        let mut padder = SidePadding::new(SidePaddingType::SmoothRamp, &mut snd, PADDING_LEFT, PADDING_RIGHT);
-        padder.pad_left(&mut data[..PADDING_LEFT * 2], 1f64, 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn padding_right_oversize_zeros() {
-        const PADDING_LEFT: usize = 4096;
-        const PADDING_RIGHT: usize = 4096;
-
-        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-        let mut data = vec![0f64; PADDING_RIGHT * 2];
-
-        let mut padder = SidePadding::new(SidePaddingType::Zeros, &mut snd, PADDING_LEFT, PADDING_RIGHT);
-        padder.pad_right(&mut data[..PADDING_RIGHT * 2], 1f64, 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn padding_right_oversize_loop() {
-        const PADDING_LEFT: usize = 4096;
-        const PADDING_RIGHT: usize = 4096;
-
-        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-        let mut data = vec![0f64; PADDING_RIGHT * 2];
-
-        let mut padder = SidePadding::new(SidePaddingType::Loop, &mut snd, PADDING_LEFT, PADDING_RIGHT);
-        padder.pad_right(&mut data[..PADDING_RIGHT * 2], 1f64, 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn padding_right_oversize_ramp() {
-        const PADDING_LEFT: usize = 4096;
-        const PADDING_RIGHT: usize = 4096;
-
-        let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-        let mut data = vec![0f64; PADDING_RIGHT * 2];
-
-        let mut padder = SidePadding::new(SidePaddingType::SmoothRamp, &mut snd, PADDING_LEFT, PADDING_RIGHT);
-        padder.pad_right(&mut data[..PADDING_RIGHT * 2], 1f64, 0);
-    }
-}
-
-mod time_window {
-    use crate::dsp::{SidePaddingType, WindowType, time_window::TimeWindowBatcher};
-    use super::get_test_files_location;
-    use std::convert::TryFrom;
-    
-    #[test]
-    fn build() {
-        let valid_window_size = &[128usize, 256, 512, 1024, 2048, 4096, 8192, 666, 1333];
-        let valid_overlaps = &[0.1f64, 0.25f64, 0.5f64, 0.75f64, 0.95f64];
-        
-        for window_size in valid_window_size {
-            for overlap in valid_overlaps {
-                let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-                    .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-                TimeWindowBatcher::new(snd, *window_size, *overlap, WindowType::Hanning, SidePaddingType::Zeros).unwrap();
-            }
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn negative_overlap() {
-        const WINDOW_SIZE: usize = 2048;
-        const OVERLAP: f64 = -1f64;
-        let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-
-        TimeWindowBatcher::new(snd, WINDOW_SIZE, OVERLAP, WindowType::Hanning, SidePaddingType::Zeros).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn overlap_greater_than_one() {
-        const WINDOW_SIZE: usize = 2048;
-        const OVERLAP: f64 = 1.5f64;
-        let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-
-        TimeWindowBatcher::new(snd, WINDOW_SIZE, OVERLAP, WindowType::Hanning, SidePaddingType::Zeros).unwrap();
-    }
-
-    #[test]
-    fn check_content() {
-        let valid_window_size = &[128usize, 256, 512, 1024, 2048, 4096, 8192, 666, 1333];
-        let valid_overlaps = &[0.1f64, 0.25f64, 0.5f64, 0.75f64, 0.95f64];
-        
-        for window_size in valid_window_size {
-            for overlap in valid_overlaps {
-                let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-                    .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
-                let frames = snd.len().unwrap();
-                let channels = snd.get_channels();
-
-                let band_size = (*window_size as f64 * (1f64 - *overlap)) as i32;
-                let expected_num_batch = usize::try_from(frames / band_size as u64).unwrap();
-                
-                let mut batcher = TimeWindowBatcher::new(snd, *window_size, *overlap, WindowType::Hanning, SidePaddingType::Zeros).unwrap();
-                let num_batch = batcher.get_num_bands();
-
-                assert!(expected_num_batch == num_batch 
-                        || expected_num_batch + 1 == num_batch);
-                
-                let mut count = 0usize;
-
-                loop {
-                    let batch_opt = batcher.get_next_batch();
-                    if batch_opt.is_none() {
-                        break;
-                    }
-                    let batch = batch_opt.unwrap();
-                    
-                    assert_eq!(batch.len(), channels);
-                    
-                    for chan in batch {
-                        assert_eq!(chan.len(), *window_size);
-                    }
-    
-                    count += 1;
+                for i in 0..snd.get_channels() {
+                    padder.pad_left(&mut data[..PADDING_LEFT / 2], 1f64, i);
+                    padder.pad_right(&mut data[..WINDOW_SIZE / 2], 1f64, i);
                 }
+            }
+        }
 
-                assert_eq!(count, num_batch);
+        #[test]
+        #[should_panic]
+        fn padding_left_oversize_zeros() {
+            const PADDING_LEFT: usize = 1024;
+            const PADDING_RIGHT: usize = 4096;
+
+            let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
+            let mut data = vec![0f64; PADDING_LEFT * 2];
+
+            let mut padder = SidePadding::new(
+                SidePaddingType::Zeros,
+                &mut snd,
+                PADDING_LEFT,
+                PADDING_RIGHT,
+            );
+            padder.pad_left(&mut data[..PADDING_LEFT * 2], 1f64, 0);
+        }
+
+        #[test]
+        #[should_panic]
+        fn padding_left_oversize_loop() {
+            const PADDING_LEFT: usize = 1024;
+            const PADDING_RIGHT: usize = 4096;
+
+            let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
+            let mut data = vec![0f64; PADDING_LEFT * 2];
+
+            let mut padder =
+                SidePadding::new(SidePaddingType::Loop, &mut snd, PADDING_LEFT, PADDING_RIGHT);
+            padder.pad_left(&mut data[..PADDING_LEFT * 2], 1f64, 0);
+        }
+
+        #[test]
+        #[should_panic]
+        fn padding_left_oversize_ramp() {
+            const PADDING_LEFT: usize = 1024;
+            const PADDING_RIGHT: usize = 4096;
+
+            let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
+            let mut data = vec![0f64; PADDING_LEFT * 2];
+
+            let mut padder = SidePadding::new(
+                SidePaddingType::SmoothRamp,
+                &mut snd,
+                PADDING_LEFT,
+                PADDING_RIGHT,
+            );
+            padder.pad_left(&mut data[..PADDING_LEFT * 2], 1f64, 0);
+        }
+
+        #[test]
+        #[should_panic]
+        fn padding_right_oversize_zeros() {
+            const PADDING_LEFT: usize = 4096;
+            const PADDING_RIGHT: usize = 4096;
+
+            let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
+            let mut data = vec![0f64; PADDING_RIGHT * 2];
+
+            let mut padder = SidePadding::new(
+                SidePaddingType::Zeros,
+                &mut snd,
+                PADDING_LEFT,
+                PADDING_RIGHT,
+            );
+            padder.pad_right(&mut data[..PADDING_RIGHT * 2], 1f64, 0);
+        }
+
+        #[test]
+        #[should_panic]
+        fn padding_right_oversize_loop() {
+            const PADDING_LEFT: usize = 4096;
+            const PADDING_RIGHT: usize = 4096;
+
+            let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
+            let mut data = vec![0f64; PADDING_RIGHT * 2];
+
+            let mut padder =
+                SidePadding::new(SidePaddingType::Loop, &mut snd, PADDING_LEFT, PADDING_RIGHT);
+            padder.pad_right(&mut data[..PADDING_RIGHT * 2], 1f64, 0);
+        }
+
+        #[test]
+        #[should_panic]
+        fn padding_right_oversize_ramp() {
+            const PADDING_LEFT: usize = 4096;
+            const PADDING_RIGHT: usize = 4096;
+
+            let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
+            let mut data = vec![0f64; PADDING_RIGHT * 2];
+
+            let mut padder = SidePadding::new(
+                SidePaddingType::SmoothRamp,
+                &mut snd,
+                PADDING_LEFT,
+                PADDING_RIGHT,
+            );
+            padder.pad_right(&mut data[..PADDING_RIGHT * 2], 1f64, 0);
+        }
+    }
+
+    mod time_window {
+        use super::get_test_files_location;
+        use crate::dsp::{time_window::TimeWindowBatcher, SidePaddingType, WindowType};
+        use std::convert::TryFrom;
+
+        #[test]
+        fn build() {
+            let valid_window_size = &[128usize, 256, 512, 1024, 2048, 4096, 8192, 666, 1333];
+            let valid_overlaps = &[0.1f64, 0.25f64, 0.5f64, 0.75f64, 0.95f64];
+
+            for window_size in valid_window_size {
+                for overlap in valid_overlaps {
+                    let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                        .from_path(get_test_files_location().join("rock_1s.wav"))
+                        .unwrap();
+                    TimeWindowBatcher::new(
+                        snd,
+                        *window_size,
+                        *overlap,
+                        WindowType::Hanning,
+                        SidePaddingType::Zeros,
+                    )
+                    .unwrap();
+                }
+            }
+        }
+
+        #[test]
+        #[should_panic]
+        fn negative_overlap() {
+            const WINDOW_SIZE: usize = 2048;
+            const OVERLAP: f64 = -1f64;
+            let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
+
+            TimeWindowBatcher::new(
+                snd,
+                WINDOW_SIZE,
+                OVERLAP,
+                WindowType::Hanning,
+                SidePaddingType::Zeros,
+            )
+            .unwrap();
+        }
+
+        #[test]
+        #[should_panic]
+        fn overlap_greater_than_one() {
+            const WINDOW_SIZE: usize = 2048;
+            const OVERLAP: f64 = 1.5f64;
+            let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                .from_path(get_test_files_location().join("rock_1s.wav"))
+                .unwrap();
+
+            TimeWindowBatcher::new(
+                snd,
+                WINDOW_SIZE,
+                OVERLAP,
+                WindowType::Hanning,
+                SidePaddingType::Zeros,
+            )
+            .unwrap();
+        }
+
+        #[test]
+        fn check_content() {
+            let valid_window_size = &[128usize, 256, 512, 1024, 2048, 4096, 8192, 666, 1333];
+            let valid_overlaps = &[0.1f64, 0.25f64, 0.5f64, 0.75f64, 0.95f64];
+
+            for window_size in valid_window_size {
+                for overlap in valid_overlaps {
+                    let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                        .from_path(get_test_files_location().join("rock_1s.wav"))
+                        .unwrap();
+                    let frames = snd.len().unwrap();
+                    let channels = snd.get_channels();
+
+                    let band_size = (*window_size as f64 * (1f64 - *overlap)) as i32;
+                    let expected_num_batch = usize::try_from(frames / band_size as u64).unwrap();
+
+                    let mut batcher = TimeWindowBatcher::new(
+                        snd,
+                        *window_size,
+                        *overlap,
+                        WindowType::Hanning,
+                        SidePaddingType::Zeros,
+                    )
+                    .unwrap();
+                    let num_batch = batcher.get_num_bands();
+
+                    assert!(expected_num_batch == num_batch || expected_num_batch + 1 == num_batch);
+
+                    let mut count = 0usize;
+
+                    loop {
+                        let batch_opt = batcher.get_next_batch();
+                        if batch_opt.is_none() {
+                            break;
+                        }
+                        let batch = batch_opt.unwrap();
+
+                        assert_eq!(batch.len(), channels);
+
+                        for chan in batch {
+                            assert_eq!(chan.len(), *window_size);
+                        }
+
+                        count += 1;
+                    }
+
+                    assert_eq!(count, num_batch);
+                }
             }
         }
     }
-}
-
 }

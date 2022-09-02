@@ -1,10 +1,10 @@
+pub mod bindings;
 pub mod filled_rectangle;
 mod zoom;
-pub mod bindings;
 pub use zoom::*;
 pub mod event;
 
-use num_traits::{NumAssign};
+use num_traits::NumAssign;
 // use rand::distributions::{Distribution, Uniform};
 // use rand::rngs::ThreadRng;
 
@@ -17,12 +17,12 @@ use num_traits::{NumAssign};
 // }
 
 // fn deinterleaved<T: NumAssign, const C: usize>(src: &[Frame<T, C>], dst )
-pub fn deinterleave_vec<T : NumAssign + Copy>(channels: usize, src: &[T], dst: &mut[Vec<T>]) {
-    let mut vec_slices: Vec<& mut[T]> = dst.iter_mut().map(|vec| vec.as_mut_slice()).collect();
+pub fn deinterleave_vec<T: NumAssign + Copy>(channels: usize, src: &[T], dst: &mut [Vec<T>]) {
+    let mut vec_slices: Vec<&mut [T]> = dst.iter_mut().map(|vec| vec.as_mut_slice()).collect();
     deinterleave(channels, src, vec_slices.as_mut_slice());
 }
 
-pub fn deinterleave<T : NumAssign + Copy>(channels: usize, src: &[T], dst: &mut [&mut [T]]) {
+pub fn deinterleave<T: NumAssign + Copy>(channels: usize, src: &[T], dst: &mut [&mut [T]]) {
     src.chunks_exact(channels)
         .enumerate()
         .for_each(|(frame_idx, samples)| {
@@ -32,7 +32,7 @@ pub fn deinterleave<T : NumAssign + Copy>(channels: usize, src: &[T], dst: &mut 
         });
 }
 
-/* === Useful structs that could be helpful when debugging === 
+/* === Useful structs that could be helpful when debugging ===
     Commented to remove clippy warning
 */
 

@@ -5,31 +5,35 @@ pub struct ZoomError;
 pub struct Zoom {
     start: f64,
     length: f64,
-    min: f64
+    min: f64,
 }
 
 impl Zoom {
     /// Builds a new zoom tracker. Default to no zoom at all
     /// # Arguments
-    /// 
+    ///
     /// * 'max_zoom' - The maximum zoom value allowed for the current
-    /// file. 1 is no zoom, 0 is infinite zoom, 0.5 is half the content 
+    /// file. 1 is no zoom, 0 is infinite zoom, 0.5 is half the content
     /// showed at screen
     /// >1 zoom is allowed and will be casted as 1.0
     pub fn new(max_zoom: f64) -> Result<Self, ZoomError> {
         let mut min = max_zoom;
         if max_zoom <= 0f64 {
-            return Err(ZoomError)
+            return Err(ZoomError);
         } else if min > 1f64 {
             min = 1f64;
         }
-        Ok(Zoom { start: 0f64, length: 1f64, min})
+        Ok(Zoom {
+            start: 0f64,
+            length: 1f64,
+            min,
+        })
     }
 
     /// Get the relative starting point of the current zoom window btw 0 and 1
-    pub fn start(&self) -> f64{
+    pub fn start(&self) -> f64 {
         self.start
-    } 
+    }
 
     /// Get the relative length of the current zoom window btw 0 and 1
     pub fn length(&self) -> f64 {
@@ -38,11 +42,7 @@ impl Zoom {
 
     /// Set a new limit for the zoom value
     pub fn update_zoom_max(&mut self, max: f64) {
-        self.min = if max <= 1f64 {
-            max
-        } else {
-            1f64
-        };
+        self.min = if max <= 1f64 { max } else { 1f64 };
 
         // Already above the limit, nothing to change
         if self.length >= self.min {
@@ -56,12 +56,11 @@ impl Zoom {
         // Compute if the new center is appropriate or not anymore
         if center + (self.length / 2f64) > 1f64 {
             center = 1f64 - (self.length / 2f64);
-        } else if center - (self.length / 2f64) < 0f64{
+        } else if center - (self.length / 2f64) < 0f64 {
             center = self.length / 2f64;
         }
 
         self.start = center - self.length / 2f64;
-
     }
 
     pub fn zoom_in(&mut self) {
@@ -88,7 +87,7 @@ impl Zoom {
         // Compute if the new center is appropriate or not anymore
         if center + (self.length / 2f64) > 1f64 {
             center = 1f64 - (self.length / 2f64);
-        } else if center - (self.length / 2f64) < 0f64{
+        } else if center - (self.length / 2f64) < 0f64 {
             center = self.length / 2f64;
         }
 
@@ -119,12 +118,10 @@ impl Zoom {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng};
-    
-    const VALID_MAX_VALUES: &[f64] = &[0.5f64, 1.0f64, 3.0f64, 0.000000001f64,
-        0.99999999f64];
-    const INVALID_MAX_VALUES: &[f64] = &[0f64, -1.0f64, -3.0f64, -0.000000001f64,
-        -0.99999999f64];
+    use rand::Rng;
+
+    const VALID_MAX_VALUES: &[f64] = &[0.5f64, 1.0f64, 3.0f64, 0.000000001f64, 0.99999999f64];
+    const INVALID_MAX_VALUES: &[f64] = &[0f64, -1.0f64, -3.0f64, -0.000000001f64, -0.99999999f64];
 
     const MAX_TOP_VALUE: f64 = f64::MAX;
     const MAX_BTM_VALUE: f64 = f64::EPSILON;
@@ -188,7 +185,7 @@ mod tests {
                 assert!(z.length() <= 1f64);
                 assert!(z.length() > 0f64);
             }
-         }
+        }
     }
 
     #[test]
@@ -217,7 +214,7 @@ mod tests {
                 match rng.gen::<u32>() % 2 {
                     0 => z.zoom_in(),
                     1 => z.zoom_out(),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
 
@@ -269,7 +266,7 @@ mod tests {
                 match rng.gen::<u32>() % 2 {
                     0 => z.move_left(),
                     1 => z.move_right(),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
 
@@ -293,7 +290,7 @@ mod tests {
                     1 => z.move_right(),
                     2 => z.zoom_in(),
                     3 => z.zoom_out(),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
 

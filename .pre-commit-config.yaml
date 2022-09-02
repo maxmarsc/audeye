@@ -16,3 +16,10 @@ repos:
         args: ["--", "-D", "warnings"]
         types: [rust]
         pass_filenames: false
+    -   id: fmt
+        name: fmt
+        description: Check files formating with cargo fmt.
+        entry: cargo fmt
+        language: system
+        types: [rust]
+        args: ["--", "--check"]

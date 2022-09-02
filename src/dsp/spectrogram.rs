@@ -2,7 +2,7 @@ extern crate sndfile;
 use crate::sndfile::SndFile;
 use realfft::RealFftPlanner;
 
-use super::time_window::{TimeWindowBatcher, WindowType, SidePaddingType};
+use super::time_window::{SidePaddingType, TimeWindowBatcher, WindowType};
 use super::{DspData, DspErr};
 use crate::utils::Zoom;
 
@@ -14,11 +14,9 @@ fn db_to_u8(db: f64, threshold: f64) -> u8 {
     if db < threshold {
         0u8
     } else {
-        ((db - threshold) * u8::MAX as f64 / - threshold) as u8
+        ((db - threshold) * u8::MAX as f64 / -threshold) as u8
     }
 }
-
-
 
 /// Ordered vertically and by channel. Each channel vector contains contiguous
 /// frequency bins
@@ -26,7 +24,7 @@ pub struct Spectrogram {
     num_bands: usize,
     num_bins: usize,
     // Ordered by [channel]
-    frames: Vec<Vec<u8>>
+    frames: Vec<Vec<u8>>,
 }
 
 pub struct SpectrogramParameters {
@@ -34,19 +32,25 @@ pub struct SpectrogramParameters {
     pub overlap_rate: f64,
     pub db_threshold: f64,
     pub window_type: WindowType,
-    pub side_padding_type: SidePaddingType
+    pub side_padding_type: SidePaddingType,
 }
 
-impl DspData<SpectrogramParameters> for Spectrogram{
-    fn new(sndfile: SndFile, parameters: SpectrogramParameters, norm: Option<f64>) -> Result<Spectrogram, DspErr> {
+impl DspData<SpectrogramParameters> for Spectrogram {
+    fn new(
+        sndfile: SndFile,
+        parameters: SpectrogramParameters,
+        norm: Option<f64>,
+    ) -> Result<Spectrogram, DspErr> {
         let channels = sndfile.get_channels();
-        let mut window_batcher = match TimeWindowBatcher::new(sndfile, 
-                parameters.window_size, 
-                parameters.overlap_rate, 
-                parameters.window_type,
-                parameters.side_padding_type) {
+        let mut window_batcher = match TimeWindowBatcher::new(
+            sndfile,
+            parameters.window_size,
+            parameters.overlap_rate,
+            parameters.window_type,
+            parameters.side_padding_type,
+        ) {
             Ok(batcher) => batcher,
-            Err(err) => return Err(err)
+            Err(err) => return Err(err),
         };
         if parameters.db_threshold > 0f64 {
             return Err(DspErr::new("dB threshold should be a negative value"));
@@ -61,7 +65,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
         let mut planner = RealFftPlanner::<f64>::new();
         let r2c = planner.plan_fft_forward(parameters.window_size);
         let mut spectrum = r2c.make_output_vec();
-        let mut scratch  = r2c.make_scratch_vec();
+        let mut scratch = r2c.make_scratch_vec();
 
         // Compute the Spectrogram
         let mut batch_idx = 0usize;
@@ -69,57 +73,64 @@ impl DspData<SpectrogramParameters> for Spectrogram{
         let correction_factor = parameters.window_type.correction_factor();
 
         while let Some(mut batchs) = window_batcher.get_next_batch() {
-
             // Iterate over each channel
             for (ch_idx, mono_batch) in batchs.iter_mut().enumerate() {
                 // Process the FFT
-                r2c.process_with_scratch(mono_batch, &mut spectrum, &mut scratch).unwrap();
+                r2c.process_with_scratch(mono_batch, &mut spectrum, &mut scratch)
+                    .unwrap();
 
-                let u8_spectrogram_slice = &mut spectrograms_u8[ch_idx][batch_idx*(num_bins)..(batch_idx + 1)*(num_bins)];
+                let u8_spectrogram_slice = &mut spectrograms_u8[ch_idx]
+                    [batch_idx * (num_bins)..(batch_idx + 1) * (num_bins)];
 
                 // Compute the magnitude and reduce it to u8
                 match norm {
                     Some(fnorm) => {
                         let fnorm_inv = 1f64 / fnorm;
-                        spectrum[1..num_bins + 1].iter()
+                        spectrum[1..num_bins + 1]
+                            .iter()
                             .enumerate()
-                            .for_each(|(fidx, value) | {
-                                let bin_amp = (value * correction_factor * fnorm_inv / fft_len).norm_sqr();
+                            .for_each(|(fidx, value)| {
+                                let bin_amp =
+                                    (value * correction_factor * fnorm_inv / fft_len).norm_sqr();
                                 let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
-                                u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threshold);
+                                u8_spectrogram_slice[fidx] =
+                                    db_to_u8(db_bin_amp, parameters.db_threshold);
                             });
-                    },
+                    }
                     None => {
-                        spectrum[1..num_bins + 1].iter()
+                        spectrum[1..num_bins + 1]
+                            .iter()
                             .enumerate()
-                            .for_each(|(fidx, value) | {
+                            .for_each(|(fidx, value)| {
                                 let bin_amp = (value * correction_factor / fft_len).norm_sqr();
                                 let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
-                                u8_spectrogram_slice[fidx] = db_to_u8(db_bin_amp, parameters.db_threshold);
+                                u8_spectrogram_slice[fidx] =
+                                    db_to_u8(db_bin_amp, parameters.db_threshold);
                             });
                     }
                 }
             }
 
-
             batch_idx += 1;
-
         }
 
-        Ok(Spectrogram{
+        Ok(Spectrogram {
             num_bands,
             num_bins,
-            frames: spectrograms_u8
+            frames: spectrograms_u8,
         })
     }
 }
 
 impl Spectrogram {
-    pub fn data(&mut self, channel :usize, zoom: &Zoom) -> (&mut [u8], usize) {
+    pub fn data(&mut self, channel: usize, zoom: &Zoom) -> (&mut [u8], usize) {
         let start = (self.num_bands as f64 * zoom.start()) as usize;
         let end = (self.num_bands as f64 * (zoom.start() + zoom.length())) as usize;
 
-        (&mut self.frames[channel][start * self.num_bins..end * self.num_bins], end - start)
+        (
+            &mut self.frames[channel][start * self.num_bins..end * self.num_bins],
+            end - start,
+        )
     }
 
     pub fn num_bins(&self) -> usize {
@@ -129,12 +140,15 @@ impl Spectrogram {
 
 #[cfg(test)]
 mod tests {
-    use crate::dsp::{SidePaddingType, WindowType, Spectrogram, SpectrogramParameters, DspData, AsyncDspData, AsyncDspDataState};
+    use crate::dsp::{
+        AsyncDspData, AsyncDspDataState, DspData, SidePaddingType, Spectrogram,
+        SpectrogramParameters, WindowType,
+    };
+    use crate::Zoom;
     use sndfile;
     use std::path::{Path, PathBuf};
-    use crate::Zoom;
-    use std::time::Duration;
     use std::thread::sleep;
+    use std::time::Duration;
 
     fn get_test_files_location() -> PathBuf {
         return Path::new(&env!("CARGO_MANIFEST_DIR").to_string())
@@ -146,9 +160,18 @@ mod tests {
     fn build() {
         let overlaps = [0.25f64, 0.5f64, 0.75f64];
         let windows = [512usize, 1024, 2048, 4096];
-        let window_types = [WindowType::Hamming, WindowType::Blackman, WindowType::Hanning, WindowType::Uniform];
+        let window_types = [
+            WindowType::Hamming,
+            WindowType::Blackman,
+            WindowType::Hanning,
+            WindowType::Uniform,
+        ];
         let db_thresholds = [-130f64, -80f64, -30f64];
-        let side_paddings = [SidePaddingType::Loop, SidePaddingType::SmoothRamp, SidePaddingType::Zeros];
+        let side_paddings = [
+            SidePaddingType::Loop,
+            SidePaddingType::SmoothRamp,
+            SidePaddingType::Zeros,
+        ];
 
         for overlap in overlaps {
             for window_size in windows {
@@ -161,11 +184,13 @@ mod tests {
                                     overlap_rate: overlap,
                                     window_type: wtype,
                                     db_threshold: db_th,
-                                    side_padding_type: padding_type
+                                    side_padding_type: padding_type,
                                 };
 
-                                let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-                                    .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
+                                let snd =
+                                    sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
+                                        .from_path(get_test_files_location().join("rock_1s.wav"))
+                                        .unwrap();
                                 Spectrogram::new(snd, parameters, norm).unwrap();
                             }
                         }
@@ -187,11 +212,12 @@ mod tests {
             overlap_rate: OVERLAP,
             window_type: WindowType::Hanning,
             db_threshold: DB_THRESHOLD,
-            side_padding_type: SidePaddingType::Zeros
+            side_padding_type: SidePaddingType::Zeros,
         };
         let path = get_test_files_location().join("rock_1s.wav");
 
-        let mut async_data: AsyncDspData<Spectrogram, SpectrogramParameters> = AsyncDspData::new(&path, parameters, false);
+        let mut async_data: AsyncDspData<Spectrogram, SpectrogramParameters> =
+            AsyncDspData::new(&path, parameters, false);
         let mut attempts = 0;
 
         loop {
@@ -221,11 +247,12 @@ mod tests {
             overlap_rate: OVERLAP,
             window_type: WindowType::Hanning,
             db_threshold: DB_THRESHOLD,
-            side_padding_type: SidePaddingType::Zeros
+            side_padding_type: SidePaddingType::Zeros,
         };
         let path = get_test_files_location().join("rock_1s.wav");
 
-        let mut async_data: AsyncDspData<Spectrogram, SpectrogramParameters> = AsyncDspData::new(&path, parameters, true);
+        let mut async_data: AsyncDspData<Spectrogram, SpectrogramParameters> =
+            AsyncDspData::new(&path, parameters, true);
         let mut attempts = 0;
 
         loop {
@@ -254,11 +281,12 @@ mod tests {
             overlap_rate: OVERLAP,
             window_type: WindowType::Hanning,
             db_threshold: DB_THRESHOLD,
-            side_padding_type: SidePaddingType::Zeros
+            side_padding_type: SidePaddingType::Zeros,
         };
 
         let snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(get_test_files_location().join("rock_1s.wav")).unwrap();
+            .from_path(get_test_files_location().join("rock_1s.wav"))
+            .unwrap();
         let channels = snd.get_channels();
         let mut spectro = Spectrogram::new(snd, parameters, None).unwrap();
         let num_bins = spectro.num_bins();
@@ -280,7 +308,7 @@ mod tests {
 
             for ch_idx in 0..channels {
                 let (no_zoom_data, num_bands) = spectro.data(ch_idx, &mut zoom);
-    
+
                 assert_ne!(no_zoom_data.len(), 0usize);
                 assert_eq!(num_bins * num_bands, no_zoom_data.len());
             }

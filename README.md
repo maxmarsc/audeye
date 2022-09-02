@@ -49,7 +49,9 @@ apt-get install libsndfile1-dev
 ```
 
 # Installation
-TBD
+```
+cargo install audeye
+```
 
 # Build
 1. [Install Rust](https://www.rust-lang.org/tools/install)
@@ -58,6 +60,13 @@ TBD
 
 ## Development
 Please consider audeye is still in early development, feedbacks are very welcome
+
+### Requirements
+ - [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+ - [libsndfile](#dependencies)
+ - [precommit](https://pre-commit.com/#install)
+ - [clippy](https://github.com/rust-lang/rust-clippy)
+ - [rustfmt](https://github.com/rust-lang/rustfmt)
 
 ### Contributing
 If you wanna contribute, either make a PR (for small changes/adds) or contact me

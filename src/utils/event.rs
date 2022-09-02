@@ -14,7 +14,7 @@ pub enum Event<I> {
 /// A small event handler that wrap termion input and tick events. Each event
 /// type is handled in its own thread and returned to a common `Receiver`
 pub struct Events {
-    rx: mpsc::Receiver<Event<Key>>
+    rx: mpsc::Receiver<Event<Key>>,
 }
 
 #[derive(Debug, Clone, Copy)]

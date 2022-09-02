@@ -2,18 +2,14 @@ use super::{draw_text_info, renderer::ChannelRenderer};
 use core::panic;
 extern crate sndfile;
 use crate::utils::Zoom;
-use tui::backend::{Backend};
+use std::convert::TryFrom;
+use tui::backend::Backend;
 use tui::layout::Rect;
 use tui::symbols::Marker;
-use tui::widgets::canvas::{Canvas, Line, Context};
-use tui::{
-    widgets::{Block},
-    style::{Color},
-    Frame
-};
-use std::convert::TryFrom;
+use tui::widgets::canvas::{Canvas, Context, Line};
+use tui::{style::Color, widgets::Block, Frame};
 
-use crate::dsp::{Waveform, AsyncDspData, WaveformParameters, AsyncDspDataState, WaveformPoint};
+use crate::dsp::{AsyncDspData, AsyncDspDataState, Waveform, WaveformParameters, WaveformPoint};
 
 // fn draw_outlined_shape(ctx: &mut Context, n_int: &Vec<i32>, p_int: &Vec<i32>) {
 //     let mut previous_idx = 0usize;
@@ -62,30 +58,30 @@ fn draw_shape(ctx: &mut Context, points: &[WaveformPoint<i32>]) {
 
     for (idx, points) in points.iter().enumerate() {
         // Draw inner RMS shape
-        ctx.draw(&Line{
+        ctx.draw(&Line {
             x1: idx as f64,
             x2: idx as f64,
             y1: -(points.rms as f64),
             y2: points.rms as f64,
-            color: Color::White
+            color: Color::White,
         });
 
         if idx != 0usize {
             // Draw top and low peaks
-            ctx.draw(&Line{
+            ctx.draw(&Line {
                 x1: idx as f64 - 1f64,
                 x2: idx as f64,
                 y1: prev_peak_up,
                 y2: points.peak_max as f64,
-                color: Color::White
+                color: Color::White,
             });
 
-            ctx.draw(&Line{
+            ctx.draw(&Line {
                 x1: idx as f64 - 1f64,
                 x2: idx as f64,
                 y1: prev_peak_down,
                 y2: points.peak_min as f64,
-                color: Color::White
+                color: Color::White,
             });
         }
 
@@ -97,62 +93,72 @@ fn draw_shape(ctx: &mut Context, points: &[WaveformPoint<i32>]) {
 pub struct WaveformRenderer {
     channels: usize,
     async_renderer: AsyncDspData<Waveform, WaveformParameters>,
-    max_width_res: usize
+    max_width_res: usize,
 }
 
 impl WaveformRenderer {
     pub fn new(path: &std::path::PathBuf, normalize: bool) -> WaveformRenderer {
         let mut snd = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto)
-            .from_path(path).expect("Could not open wave file");
-        
+            .from_path(path)
+            .expect("Could not open wave file");
+
         let channels = snd.get_channels();
         let max_res = usize::try_from(snd.len().unwrap()).unwrap();
-            
+
         WaveformRenderer {
             channels,
             async_renderer: AsyncDspData::new(path, WaveformParameters::default(), normalize),
-            max_width_res: max_res
+            max_width_res: max_res,
         }
     }
 }
 
 impl ChannelRenderer for WaveformRenderer {
-    fn draw_single_channel<B: Backend>(&mut self, frame: &mut Frame<'_, B>, channel: usize, area: Rect, block: Block, zoom: &Zoom) {
+    fn draw_single_channel<B: Backend>(
+        &mut self,
+        frame: &mut Frame<'_, B>,
+        channel: usize,
+        area: Rect,
+        block: Block,
+        zoom: &Zoom,
+    ) {
         match self.async_renderer.state() {
             AsyncDspDataState::Normalizing => {
                 draw_text_info(frame, area, block, "Normalizing...");
                 return;
-            },
+            }
             AsyncDspDataState::Created | AsyncDspDataState::Processing => {
                 draw_text_info(frame, area, block, "Loading...");
                 return;
-            },
+            }
             AsyncDspDataState::Failed => {
                 // Should crash soon
                 draw_text_info(frame, area, block, "Error");
                 return;
-            },
+            }
             _ => {}
         }
 
-        if channel >= self.channels { panic!(); }
+        if channel >= self.channels {
+            panic!();
+        }
 
         // Prepare
         let data_ref = self.async_renderer.data().unwrap();
         let canva_width_int = area.width as usize - 2;
-        let estimated_witdh_res = canva_width_int * 2;      // Braille res is 2 per char
+        let estimated_witdh_res = canva_width_int * 2; // Braille res is 2 per char
 
         // Compute local min & max for each block
         let points = data_ref.compute_points(channel, estimated_witdh_res, zoom);
-    
+
         // Draw the canva
         let canva = Canvas::default()
             .block(block)
-            .paint(|ctx| { draw_shape(ctx, &points) })
+            .paint(|ctx| draw_shape(ctx, &points))
             .marker(Marker::Braille)
             .x_bounds([-1., estimated_witdh_res as f64 + 1f64])
             .y_bounds([i32::MIN as f64, i32::MAX as f64]);
-        
+
         frame.render_widget(canva, area)
     }
 
@@ -164,5 +170,3 @@ impl ChannelRenderer for WaveformRenderer {
         self.max_width_res
     }
 }
-
-
