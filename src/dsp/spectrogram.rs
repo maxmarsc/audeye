@@ -68,30 +68,7 @@ impl DspData<SpectrogramParameters> for Spectrogram{
         let fft_len = parameters.window_size as f64 / 2f64;
         let correction_factor = parameters.window_type.correction_factor();
 
-
-        loop {
-            let mut batchs = match window_batcher.get_next_batch()  {
-                Some(batchs) => batchs,
-                None => break
-            };
-
-            // // Perfect sine
-            // let phi = 2f64 * std::f64::consts::PI / WINDOW_SIZE as f64 * 4f64;
-            // for channel in batchs.iter_mut() {
-            //     channel[0] = 1f64;
-            //     for (idx,value) in channel[1..].iter_mut().enumerate() {
-            //         *value = f64::sin(phi * idx as f64);
-            //     }
-            // }
-
-            // // Impulse
-            // for channel in batchs.iter_mut() {
-            //     channel[0] = 1f64;
-            //     for value in channel[1..].iter_mut() {
-            //         *value = 1f64;
-            //     }
-            // }
-
+        while let Some(mut batchs) = window_batcher.get_next_batch() {
 
             // Iterate over each channel
             for (ch_idx, mono_batch) in batchs.iter_mut().enumerate() {

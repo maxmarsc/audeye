@@ -64,11 +64,11 @@ impl Renderer for HelperPopup {
                         Span::styled(bindings::key_to_string(value), value_style)
                     ])})
                 .collect()})
-            .map(|mut spans: Vec<Spans>| {
+            .flat_map(|mut spans: Vec<Spans>| {
                 spans.extend(vec![Spans::from("")]);
                 spans
             })
-            .flatten().collect();
+            .collect();
 
         let paragraph = Paragraph::new(spans)
             .block(Block::default().title("Bindings").borders(Borders::ALL))

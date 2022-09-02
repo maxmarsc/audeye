@@ -51,28 +51,28 @@ impl WindowType {
 
     pub fn parse(name: &str) -> Result<Self, WindowTypeParseError> {
         if name == HANNING {
-            return Ok(Self::Hanning);
+            Ok(Self::Hanning)
         } else if name == HAMMING {
-            return Ok(Self::Hamming);
+            Ok(Self::Hamming)
         } else if name == BLACKMAN {
-            return Ok(Self::Blackman);
+            Ok(Self::Blackman)
         } else if name == UNIFORM {
-            return Ok(Self::Uniform);
+            Ok(Self::Uniform)
         } else {
-            return Err(WindowTypeParseError);
+            Err(WindowTypeParseError)
         }
     }
 
     pub fn possible_values() -> &'static [&'static str] {
-        return &[HAMMING, HANNING, BLACKMAN, UNIFORM];
+        &[HAMMING, HANNING, BLACKMAN, UNIFORM]
     }
 
     pub fn default() -> &'static str {
-        return HANNING;
+        HANNING
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SidePaddingType {
     Zeros,
     SmoothRamp,
@@ -94,24 +94,21 @@ impl SidePadding {
         let mut padding_left = vec![vec![0f64;max_padding_left]; channels];
         let mut padding_right  = vec![vec![0f64;max_padding_right]; channels];
 
-        match padding_type {
-            SidePaddingType::Loop => {
-                let frames = sndfile.len().unwrap();
-                let mut interleaved_data = vec![0f64; channels * max_padding_right];
+        if padding_type == SidePaddingType::Loop {
+            let frames = sndfile.len().unwrap();
+            let mut interleaved_data = vec![0f64; channels * max_padding_right];
 
-                // Read the beginning of the file
-                sndfile.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
-                sndfile.read_to_slice(interleaved_data.as_mut_slice()).unwrap();
-                deinterleave_vec(channels, interleaved_data.as_slice(), padding_right.as_mut_slice());
-                
-                // Read the end of the file
-                let idx_offset = frames - max_padding_left as u64;
-                sndfile.seek(SeekFrom::Start(idx_offset)).unwrap();
-                sndfile.read_to_slice(interleaved_data.as_mut_slice()).unwrap();
-                deinterleave_vec(channels, &interleaved_data[..max_padding_left*channels], padding_left.as_mut_slice());
-            },
-            _ => ()
-        };
+            // Read the beginning of the file
+            sndfile.seek(SeekFrom::Start(0)).expect("Failed to seek 0");
+            sndfile.read_to_slice(interleaved_data.as_mut_slice()).unwrap();
+            deinterleave_vec(channels, interleaved_data.as_slice(), padding_right.as_mut_slice());
+            
+            // Read the end of the file
+            let idx_offset = frames - max_padding_left as u64;
+            sndfile.seek(SeekFrom::Start(idx_offset)).unwrap();
+            sndfile.read_to_slice(interleaved_data.as_mut_slice()).unwrap();
+            deinterleave_vec(channels, &interleaved_data[..max_padding_left*channels], padding_left.as_mut_slice());
+        }
 
         Self{
             padding_type,
