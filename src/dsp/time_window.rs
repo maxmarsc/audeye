@@ -71,7 +71,7 @@ impl WindowType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SidePaddingType {
     Zeros,
     SmoothRamp,

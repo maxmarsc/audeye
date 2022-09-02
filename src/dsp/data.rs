@@ -33,7 +33,7 @@ pub trait DspData<P> {
         Self: Sized;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AsyncDspDataState {
     Created,
     Normalizing,
