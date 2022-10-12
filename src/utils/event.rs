@@ -31,9 +31,9 @@ impl Default for Config {
 }
 
 impl Events {
-    pub fn new() -> Events {
-        Events::with_config(Config::default())
-    }
+    // pub fn new() -> Events {
+    //     Events::with_config(Config::default())
+    // }
 
     pub fn with_config(config: Config) -> Events {
         let (tx, rx) = mpsc::channel();

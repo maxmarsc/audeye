@@ -1,5 +1,6 @@
 use sndfile::SndFileError;
 use std::convert::From;
+use std::time::Duration;
 use structopt::StructOpt;
 use tui::backend::Backend;
 use tui::style::Modifier;
@@ -16,7 +17,7 @@ use std::io::{Error, ErrorKind};
 
 mod utils;
 use utils::bindings;
-use utils::event::{Event, Events};
+use utils::event::{Config, Event, Events};
 use utils::TabsState;
 use utils::Zoom;
 
@@ -56,6 +57,7 @@ struct App<'a> {
     channels: ChannelsTabs,
     previous_frame: Rect,
     repaint: bool,
+    should_stop: bool,
     zoom: Zoom,
     helper: HelperPopup,
 }
@@ -167,7 +169,9 @@ fn main() -> Result<(), io::Error> {
     let mut terminal = Terminal::new(backend)?;
     const TAB_SIZE: u16 = 3;
 
-    let events = Events::new();
+    let events = Events::with_config(Config {
+        tick_rate: Duration::from_millis(100),
+    });
 
     // Check file
     let snd_res = sndfile::OpenOptions::ReadOnly(sndfile::ReadOptions::Auto).from_path(&args.path);
@@ -220,6 +224,7 @@ fn main() -> Result<(), io::Error> {
         channels: ChannelsTabs::new(channels),
         previous_frame: Rect::default(),
         repaint: true,
+        should_stop: false,
         zoom: Zoom::new(terminal.size()?.width as f64 / res_max).unwrap(),
         helper: HelperPopup::default(),
     };
@@ -294,84 +299,92 @@ fn main() -> Result<(), io::Error> {
         app.previous_frame = tsize;
         app.repaint = false;
 
-        let event = events.next().unwrap();
+        loop {
+            let event = events.next().unwrap();
 
-        match event {
-            Event::Input(input) => match input {
-                bindings::QUIT => break,
-                bindings::NEXT_PANEL => {
-                    app.tabs.next();
-                    app.repaint = true;
+            match event {
+                Event::Input(input) => match input {
+                    bindings::QUIT => {
+                        app.should_stop = true;
+                    }
+                    bindings::NEXT_PANEL => {
+                        app.tabs.next();
+                        app.repaint = true;
+                    }
+                    bindings::PREVIOUS_PANEL => {
+                        app.tabs.previous();
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_SELECTOR_1 => {
+                        app.channels.update(0);
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_SELECTOR_2 => {
+                        app.channels.update(1);
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_SELECTOR_3 => {
+                        app.channels.update(2);
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_SELECTOR_4 => {
+                        app.channels.update(3);
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_SELECTOR_5 => {
+                        app.channels.update(4);
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_SELECTOR_6 => {
+                        app.channels.update(5);
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_SELECTOR_7 => {
+                        app.channels.update(6);
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_SELECTOR_8 => {
+                        app.channels.update(7);
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_SELECTOR_9 => {
+                        app.channels.update(8);
+                        app.repaint = true;
+                    }
+                    bindings::CHANNEL_RESET => {
+                        app.channels.reset();
+                        app.repaint = true;
+                    }
+                    bindings::MOVE_LEFT => {
+                        app.zoom.move_left();
+                        app.repaint = true;
+                    }
+                    bindings::MOVE_RIGHT => {
+                        app.zoom.move_right();
+                        app.repaint = true;
+                    }
+                    bindings::ZOOM_OUT => {
+                        app.zoom.zoom_out();
+                        app.repaint = true;
+                    }
+                    bindings::ZOOM_IN => {
+                        app.zoom.zoom_in();
+                        app.repaint = true;
+                    }
+                    bindings::HELP => {
+                        app.helper.set_visible(!app.helper.is_visible());
+                        app.repaint = true;
+                    }
+                    _ => {}
+                },
+                Event::Tick => {
+                    break;
                 }
-                bindings::PREVIOUS_PANEL => {
-                    app.tabs.previous();
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_SELECTOR_1 => {
-                    app.channels.update(0);
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_SELECTOR_2 => {
-                    app.channels.update(1);
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_SELECTOR_3 => {
-                    app.channels.update(2);
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_SELECTOR_4 => {
-                    app.channels.update(3);
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_SELECTOR_5 => {
-                    app.channels.update(4);
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_SELECTOR_6 => {
-                    app.channels.update(5);
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_SELECTOR_7 => {
-                    app.channels.update(6);
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_SELECTOR_8 => {
-                    app.channels.update(7);
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_SELECTOR_9 => {
-                    app.channels.update(8);
-                    app.repaint = true;
-                }
-                bindings::CHANNEL_RESET => {
-                    app.channels.reset();
-                    app.repaint = true;
-                }
-                bindings::MOVE_LEFT => {
-                    app.zoom.move_left();
-                    app.repaint = true;
-                }
-                bindings::MOVE_RIGHT => {
-                    app.zoom.move_right();
-                    app.repaint = true;
-                }
-                bindings::ZOOM_OUT => {
-                    app.zoom.zoom_out();
-                    app.repaint = true;
-                }
-                bindings::ZOOM_IN => {
-                    app.zoom.zoom_in();
-                    app.repaint = true;
-                }
-                bindings::HELP => {
-                    app.helper.set_visible(!app.helper.is_visible());
-                    app.repaint = true;
-                }
-                _ => {}
-            },
-            Event::Tick => {
-                continue;
             }
+        }
+
+        if app.should_stop {
+            break;
         }
     }
 
