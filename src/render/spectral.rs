@@ -94,7 +94,7 @@ impl<'a> ChannelRenderer for SpectralRenderer<'a> {
             NonZeroU32::new(num_bins.try_into().unwrap()).unwrap(),
             NonZeroU32::new(num_bands.try_into().unwrap()).unwrap(),
             data_slice,
-            fr::PixelType::U8x4,
+            fr::PixelType::U8x3,
         )
         .unwrap();
 
@@ -107,7 +107,7 @@ impl<'a> ChannelRenderer for SpectralRenderer<'a> {
         self.canva_img = Some(fr::Image::new(
             NonZeroU32::new(resize_dst_width.try_into().unwrap()).unwrap(),
             NonZeroU32::new(resize_dst_height.try_into().unwrap()).unwrap(),
-            fr::PixelType::U8x4,
+            fr::PixelType::U8x3,
         ));
 
         let canva_img_ref = self.canva_img.as_mut().unwrap();

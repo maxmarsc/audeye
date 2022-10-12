@@ -34,12 +34,12 @@ impl<'a> Widget for Image<'a> {
         };
 
         self.img_buffer
-            .chunks(8)
+            .chunks(6)
             .into_iter()
             .map(|pixels| {
                 [
                     Color::Rgb(pixels[0], pixels[1], pixels[2]),
-                    Color::Rgb(pixels[4], pixels[5], pixels[6]),
+                    Color::Rgb(pixels[3], pixels[4], pixels[5]),
                 ]
             })
             .enumerate()

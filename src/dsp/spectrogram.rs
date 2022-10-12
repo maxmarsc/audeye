@@ -62,7 +62,7 @@ impl DspData<SpectrogramParameters> for Spectrogram {
         let num_bands = window_batcher.get_num_bands();
 
         // Allocate the memory for the u8 spectrograms
-        let mut spectrograms_u8x4 = vec![vec![0u8; num_bands * num_bins * 4]; channels];
+        let mut spectrograms_u8x4 = vec![vec![0u8; num_bands * num_bins * 3]; channels];
         let gradient = inferno();
 
         // Plan the fft
@@ -83,8 +83,8 @@ impl DspData<SpectrogramParameters> for Spectrogram {
                 r2c.process_with_scratch(mono_batch, &mut spectrum, &mut scratch)
                     .unwrap();
 
-                let u8x4_spectrogram_slice = &mut spectrograms_u8x4[ch_idx]
-                    [batch_idx * (num_bins) * 4..(batch_idx + 1) * (num_bins) * 4];
+                let u8x3_spectrogram_slice = &mut spectrograms_u8x4[ch_idx]
+                    [batch_idx * (num_bins) * 3..(batch_idx + 1) * (num_bins) * 3];
 
                 // Compute the magnitude and reduce it to u8
                 match norm {
@@ -99,10 +99,9 @@ impl DspData<SpectrogramParameters> for Spectrogram {
                                 let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
                                 let color =
                                     db_to_u8x4(db_bin_amp, parameters.db_threshold, &gradient);
-                                u8x4_spectrogram_slice[fidx * 4] = color[0];
-                                u8x4_spectrogram_slice[fidx * 4 + 1] = color[1];
-                                u8x4_spectrogram_slice[fidx * 4 + 2] = color[2];
-                                u8x4_spectrogram_slice[fidx * 4 + 3] = color[3];
+                                u8x3_spectrogram_slice[fidx * 3] = color[0];
+                                u8x3_spectrogram_slice[fidx * 3 + 1] = color[1];
+                                u8x3_spectrogram_slice[fidx * 3 + 2] = color[2];
                             });
                     }
                     None => {
@@ -114,10 +113,9 @@ impl DspData<SpectrogramParameters> for Spectrogram {
                                 let db_bin_amp = 10f64 * f64::log10(bin_amp + f64::EPSILON);
                                 let color =
                                     db_to_u8x4(db_bin_amp, parameters.db_threshold, &gradient);
-                                u8x4_spectrogram_slice[fidx * 4] = color[0];
-                                u8x4_spectrogram_slice[fidx * 4 + 1] = color[1];
-                                u8x4_spectrogram_slice[fidx * 4 + 2] = color[2];
-                                u8x4_spectrogram_slice[fidx * 4 + 3] = color[3];
+                                u8x3_spectrogram_slice[fidx * 3] = color[0];
+                                u8x3_spectrogram_slice[fidx * 3 + 1] = color[1];
+                                u8x3_spectrogram_slice[fidx * 3 + 2] = color[2];
                             });
                     }
                 }
@@ -136,22 +134,12 @@ impl DspData<SpectrogramParameters> for Spectrogram {
 }
 
 impl Spectrogram {
-    // pub fn data(&mut self, channel: usize, zoom: &Zoom) -> (&mut [u8], usize) {
-    //     let start = (self.num_bands as f64 * zoom.start()) as usize;
-    //     let end = (self.num_bands as f64 * (zoom.start() + zoom.length())) as usize;
-
-    //     (
-    //         &mut self.frames[channel][start * self.num_bins..end * self.num_bins],
-    //         end - start,
-    //     )
-    // }
-
     pub fn data(&mut self, channel: usize, zoom: &Zoom) -> (&mut [u8], usize) {
         let start = (self.num_bands as f64 * zoom.start()) as usize;
         let end = (self.num_bands as f64 * (zoom.start() + zoom.length())) as usize;
 
         (
-            &mut self.color_frames[channel][start * self.num_bins * 4..end * self.num_bins * 4],
+            &mut self.color_frames[channel][start * self.num_bins * 3..end * self.num_bins * 3],
             end - start,
         )
     }
@@ -321,7 +309,7 @@ mod tests {
             let (no_zoom_data, num_bands) = spectro.data(ch_idx, &mut zoom);
 
             assert_ne!(no_zoom_data.len(), 0usize);
-            assert_eq!(num_bins * num_bands * 4, no_zoom_data.len());
+            assert_eq!(num_bins * num_bands * 3, no_zoom_data.len());
         }
 
         // Zoom in and move
@@ -333,7 +321,7 @@ mod tests {
                 let (no_zoom_data, num_bands) = spectro.data(ch_idx, &mut zoom);
 
                 assert_ne!(no_zoom_data.len(), 0usize);
-                assert_eq!(num_bins * num_bands * 4, no_zoom_data.len());
+                assert_eq!(num_bins * num_bands * 3, no_zoom_data.len());
             }
         }
     }
