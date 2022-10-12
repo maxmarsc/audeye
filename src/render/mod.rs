@@ -2,10 +2,10 @@ mod renderer;
 mod spectral;
 mod waveform;
 // mod ascii;
-mod greyscale_canva;
 mod headers;
 mod help;
 mod metadata;
+mod widgets;
 
 pub use headers::ChannelsTabs;
 pub use help::HelperPopup;

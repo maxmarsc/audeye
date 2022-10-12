@@ -30,6 +30,7 @@ apodize = "1.0.0"
 audiotags = "0.4"
 num-traits = "0.2.14"
 num-integer = "0.1.45"
+colorgrad = "0.6.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.4"

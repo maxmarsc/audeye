@@ -1,4 +1,4 @@
-use super::greyscale_canva::TransposedGreyScaleCanva;
+use super::widgets;
 use super::{draw_text_info, renderer::ChannelRenderer};
 use core::panic;
 extern crate sndfile;
@@ -7,12 +7,8 @@ use fr::Image;
 use std::convert::{TryFrom, TryInto};
 use tui::backend::Backend;
 use tui::layout::Rect;
+use tui::widgets::Block;
 use tui::Frame;
-use tui::{
-    style::Color,
-    symbols::Marker,
-    widgets::{canvas::Canvas, Block},
-};
 
 use crate::dsp::{AsyncDspData, AsyncDspDataState, Spectrogram, SpectrogramParameters};
 
@@ -45,8 +41,8 @@ impl<'a> SpectralRenderer<'a> {
         SpectralRenderer {
             channels,
             async_renderer: AsyncDspData::new(path, parameters, normalize),
-            resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
-            // resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
+            // resizer: fr::Resizer::new(fr::ResizeAlg::Nearest),
+            resizer: fr::Resizer::new(fr::ResizeAlg::Convolution(fr::FilterType::Lanczos3)),
             canva_img: None,
             max_width_resolution: usize::try_from(max_res).unwrap(),
         }
@@ -92,25 +88,26 @@ impl<'a> ChannelRenderer for SpectralRenderer<'a> {
 
         // Create source image from spectrogram
         let num_bins = data_ref.num_bins();
+
         let (data_slice, num_bands) = data_ref.data(channel, zoom);
         let src_image = fr::Image::from_slice_u8(
             NonZeroU32::new(num_bins.try_into().unwrap()).unwrap(),
             NonZeroU32::new(num_bands.try_into().unwrap()).unwrap(),
             data_slice,
-            fr::PixelType::U8,
+            fr::PixelType::U8x4,
         )
         .unwrap();
 
         // Compute dst images dimensions
         // /!\ The image is transposed (like a matrix) for better memory mapping /!\
-        let resize_dst_width = canva_height - 2;
+        let resize_dst_width = (canva_height - 2) * 2;
         let resize_dst_height = canva_width - 2;
 
-        // Store in option to keep it in memory for the rendering
+        // Store in option to keep it in memory for the renderingspectrogram
         self.canva_img = Some(fr::Image::new(
             NonZeroU32::new(resize_dst_width.try_into().unwrap()).unwrap(),
             NonZeroU32::new(resize_dst_height.try_into().unwrap()).unwrap(),
-            fr::PixelType::U8,
+            fr::PixelType::U8x4,
         ));
 
         let canva_img_ref = self.canva_img.as_mut().unwrap();
@@ -121,21 +118,10 @@ impl<'a> ChannelRenderer for SpectralRenderer<'a> {
             .resize(&src_image.view(), &mut dst_view)
             .unwrap();
 
-        let greyscale_canva = TransposedGreyScaleCanva::new(
-            canva_img_ref.buffer(),
-            resize_dst_width,
-            resize_dst_height,
-        );
+        // Build Image widget
+        let img_widget = widgets::Image::new(canva_img_ref.buffer()).block(block);
 
-        let canva = Canvas::default()
-            .block(block)
-            .background_color(Color::Rgb(0, 0, 0))
-            .paint(|ctx| ctx.draw(&greyscale_canva))
-            .marker(Marker::Block)
-            .x_bounds([-1., resize_dst_width as f64 - 1.0])
-            .y_bounds([1.0, resize_dst_height as f64 + 1.0]);
-
-        frame.render_widget(canva, area);
+        frame.render_widget(img_widget, area);
     }
 
     fn needs_redraw(&mut self) -> bool {
