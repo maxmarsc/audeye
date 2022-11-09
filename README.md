@@ -4,7 +4,7 @@
     <b> 🔊 💻 👁️Audio content visualization tool</b>
 </p>
 
-![Demo](.github/images/audeye_0_1_0.gif)
+![Demo](.github/images/audeye_0_2_0.gif)
 
 Audeye is a terminal tool to visualize audio content, written in Rust
 
