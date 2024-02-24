@@ -240,7 +240,7 @@ impl Renderer for MetadataRenderer {
         ];
         let layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(constraints.as_ref())
+            .constraints::<&[Constraint]>(constraints.as_ref())
             .split(area);
 
         // Build the spans

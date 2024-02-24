@@ -81,6 +81,6 @@ fn compute_channels_layout(area: Rect, num_channels: usize) -> Vec<Rect> {
         vec![Constraint::Ratio(1u32, u32::try_from(num_channels).unwrap()); num_channels];
     Layout::default()
         .direction(Direction::Vertical)
-        .constraints(constraints.as_ref())
+        .constraints::<&[Constraint]>(constraints.as_ref())
         .split(area)
 }
