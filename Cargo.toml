@@ -1,6 +1,6 @@
 [package]
 name = "audeye"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2018"
 description = "A terminal user interface for audiofile content visualization"
 homepage = "https://github.com/maxmarsc/audeye"
