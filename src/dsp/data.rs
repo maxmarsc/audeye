@@ -147,7 +147,7 @@ impl<T: DspData<P> + Send + 'static, P: Send + 'static> AsyncDspData<T, P> {
             data: None,
             rendered_rx,
             process_handle: Some(join_handle),
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         }
     }
 }

@@ -61,9 +61,9 @@ pub fn draw_text_info<B: Backend>(
     text: &str,
 ) {
     let num_lines_to_center: usize = if area.height % 2 == 0 {
-        usize::try_from(area.height).unwrap() / 2 - 1
+        usize::from(area.height) / 2 - 1
     } else {
-        usize::try_from(area.height).unwrap() / 2
+        usize::from(area.height) / 2
     };
 
     let mut span_vec = vec![Spans::from(""); num_lines_to_center];

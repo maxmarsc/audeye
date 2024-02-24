@@ -107,7 +107,6 @@ impl<'a> ChannelsTabs {
 
     fn states(&'a self) -> Vec<(bool, &'a str)> {
         (0..self.count())
-            .into_iter()
             .map(|idx| {
                 let title = self.titles[idx].as_str();
                 match self.activated.get(&idx) {
@@ -164,10 +163,7 @@ impl<'a> ChannelsTabs {
                 .into_iter()
                 .map(|v| v.to_string())
                 .collect(), // 7.1
-            _ => (0..count)
-                .into_iter()
-                .map(|idx| format!["Channel {:?}", idx])
-                .collect(),
+            _ => (0..count).map(|idx| format!["Channel {:?}", idx]).collect(),
         }
     }
 }

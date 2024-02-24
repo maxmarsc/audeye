@@ -107,7 +107,7 @@ impl WaveformRenderer {
 
         WaveformRenderer {
             channels,
-            async_renderer: AsyncDspData::new(path, WaveformParameters::default(), normalize),
+            async_renderer: AsyncDspData::new(path, WaveformParameters, normalize),
             max_width_res: max_res,
         }
     }

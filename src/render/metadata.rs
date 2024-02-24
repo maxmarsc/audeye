@@ -209,7 +209,7 @@ impl Renderer for MetadataRenderer {
         let value_style = Style::default();
 
         // properties
-        let properties = vec![
+        let properties = [
             ("Format", &self.metadata.format),
             ("Format subtype", &self.metadata.subtype),
             ("Endianess", &self.metadata.endianess),

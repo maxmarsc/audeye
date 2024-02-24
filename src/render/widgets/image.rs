@@ -35,7 +35,6 @@ impl<'a> Widget for Image<'a> {
 
         self.img_buffer
             .chunks(6)
-            .into_iter()
             .map(|pixels| {
                 [
                     Color::Rgb(pixels[0], pixels[1], pixels[2]),
@@ -47,13 +46,10 @@ impl<'a> Widget for Image<'a> {
                 let x_char = idx as u16 / img_area.height;
                 let y_char = img_area.height - (idx as u16 % img_area.height) - 1;
 
-                buf.get_mut(
-                    x_char as u16 + img_area.left(),
-                    y_char as u16 + img_area.top(),
-                )
-                .set_char('▄')
-                .set_bg(colors[0])
-                .set_fg(colors[1]);
+                buf.get_mut(x_char + img_area.left(), y_char + img_area.top())
+                    .set_char('▄')
+                    .set_bg(colors[0])
+                    .set_fg(colors[1]);
             });
     }
 }

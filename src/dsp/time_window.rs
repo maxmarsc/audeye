@@ -324,7 +324,7 @@ impl TimeWindowBatcher {
         // Compute the first sample to seek
         let new_seek_idx = self.crt_band_idx as u64 * self.tband_size as u64;
         self.sndfile
-            .seek(SeekFrom::Start(new_seek_idx as u64))
+            .seek(SeekFrom::Start(new_seek_idx))
             .unwrap_or_else(|_| panic!("Failed to seek frame {}", new_seek_idx));
 
         // The offset left and right of the window lobe
