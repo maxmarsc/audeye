@@ -81,6 +81,7 @@ fn channel_layout_to_string(channels: usize) -> String {
         1 => "mono",
         2 => "stereo",
         3 => "ambinosic 2.1",
+        4 => "quadrophonic",
         5 => "ambisonic 5",
         6 => "ambisonic 5.1",
         7 => "ambisonic 7",
