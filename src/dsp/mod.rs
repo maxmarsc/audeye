@@ -7,6 +7,6 @@ mod waveform;
 pub use data::{AsyncDspData, AsyncDspDataState, DspData, DspErr};
 pub use spectrogram::{Spectrogram, SpectrogramParameters};
 pub use time_window::{
-    SidePaddingType, SidePaddingTypeParseError, WindowType, WindowTypeParseError, PADDING_HELP_TEXT,
+    SidePaddingType, WindowType, PADDING_HELP_TEXT,
 };
 pub use waveform::{Waveform, WaveformParameters, WaveformPoint};
